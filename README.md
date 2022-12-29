@@ -1,5 +1,5 @@
 # HeWu
-A Python package modeling effects of nuclear weapons, using public domain knowledge. 
+A collection of Python scripts modeling effects of nuclear weapons, using public domain knowledge. 
 
 # Q&A
 * what is HeWu?\
