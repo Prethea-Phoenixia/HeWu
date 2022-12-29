@@ -119,6 +119,8 @@ def airburst(Y, HOB, GR):
     IQTOTAL: total dynamic pressure impulse, pa-s
     DPQ: dynamic pressure positive phase duration, s
     limit3: whether the IQTOTAL and DPQ estimations are within limit.
+    (this model is only applicable in the mach reflection region for these
+    parameters)
     """
     if HOB < 0:
         raise ValueError("model is not applicable to underground bursts")

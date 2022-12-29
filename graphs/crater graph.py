@@ -14,7 +14,7 @@ import matplotlib as mpt
 import matplotlib.patches as patches
 from math import floor, log10, sqrt, pi
 
-from modelWE1984 import crater
+from HeWu.modelWE1984 import crater
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from matplotlib.ticker import MultipleLocator
 

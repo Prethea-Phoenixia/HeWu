@@ -3,8 +3,8 @@ import numpy.ma as ma
 from math import floor
 import matplotlib as mpt
 import matplotlib.pyplot as plt
-from modelBLAST1984 import airburst
-from modelAWG1980 import _D_up, _I
+from HeWu.modelBLAST1984 import airburst
+from HeWu.modelAWG1980 import _D_up, _I
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import matplotlib.patches as patches
 from math import sqrt, log, log10
@@ -17,7 +17,7 @@ xmax = 3400 * Y3
 ymax = 3400 * Y3
 xmed = 1200 * Y3
 ymed = 1200 * Y3
-delta = 5 * Y3
+delta = 10 * Y3
 
 intervals = (100, 200, 250, 500, 1000, 2000, 2500, 5000, 10000)
 

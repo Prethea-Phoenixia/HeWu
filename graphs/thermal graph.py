@@ -6,7 +6,7 @@ from matplotlib.ticker import MultipleLocator
 from math import floor, log10, sqrt, pi
 import numpy as np
 import numpy.ma as ma
-from modelWE1984 import therm, phi
+from HeWu.modelWE1984 import therm, phi
 
 
 def secant(f, x_0, x_1, x_min=None, x_max=None, tol=1e-6, it=1000):
