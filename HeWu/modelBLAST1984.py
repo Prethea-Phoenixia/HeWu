@@ -5,6 +5,9 @@ Contact: 914962409@qq.com
 a faithful (with correction) reproduction of the algorithm used
 in BLAST.EXE from Horizons Technology for the Defense Nuclear Agency
 dating to 1984. 
+
+The dynamic pressure duration and impulse are untrustworthy. Please see 
+the 87 Brode model.
 """
 
 

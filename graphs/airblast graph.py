@@ -80,6 +80,7 @@ for gr in x:
             IP[j][i] = None
             DPP[j][i] = None
 
+        """dirty hack"""
         if groundRange > XM:
             IQ[j][i] = iq
             DPQ[j][i] = dpq
