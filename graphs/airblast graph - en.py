@@ -2,6 +2,7 @@ import numpy as np
 import numpy.ma as ma
 from math import floor
 import matplotlib as mpt
+from matplotlib import ticker
 import matplotlib.pyplot as plt
 from HeWu.modelBLAST1984 import airburst
 from HeWu.modelAWG1980 import _D_up, _I
@@ -30,16 +31,15 @@ for imax in intervals:
 lowXs = floor(xmed / delta)
 lowYs = floor(ymed / delta)
 
-# 10 kpa: 1650, 1500
 x = np.append(
     np.arange(delta / 1e3, xmed / 1e3, delta / 1e3),
     np.arange(xmed / 1e3, (xmax + delta) / 1e3, 5 * delta / 1e3),
-)
+)  # in kilometer
 
 y = np.append(
     np.arange(delta / 1e3, ymed / 1e3, delta / 1e3),
     np.arange(ymed / 1e3, (ymax + delta) / 1e3, 5 * delta / 1e3),
-)
+)  # in kilometer
 
 rows = y.size
 columns = x.size
@@ -50,7 +50,6 @@ DPQ = np.zeros((rows, columns))  # dynamic pressure positive phase duration
 DPP = np.zeros((rows, columns))  # overpressure positive phase duration
 IP = np.zeros((rows, columns))  # overpressure total impulse
 IQ = np.zeros((rows, columns))  # dynamic pressure total impulse
-
 
 i = 0
 for gr in x:
@@ -63,9 +62,11 @@ for gr in x:
             groundRange += 0.01
             height += 0.01
 
-        p, q, t, ip, dpp, t1, XM, _, t2, iq, dpq, t3 = airburst(Y, height, groundRange)
+        p, q, t, ip, dpp, t1, xm, htp, t2, iq, dpq, t3 = airburst(
+            Y, height, groundRange
+        )
 
-        # LM = max(80 * Y3, 1.3 * XM)
+        # LM = max(80 * Y3, 1.3 * xm)
         P[j][i] = p / 1e6
         Q[j][i] = q / 1e6
 
@@ -78,7 +79,7 @@ for gr in x:
             IP[j][i] = None
             DPP[j][i] = None
 
-        if groundRange > XM:
+        if groundRange > xm:
             IQ[j][i] = iq
             DPQ[j][i] = dpq
         else:
@@ -96,10 +97,6 @@ DPQ = ma.masked_where(DPQ is None, DPQ)
 IP = IP / 1e3
 IQ = IQ / 1e3
 
-# DPP = np.log10(DPP)
-# DPQ = np.log10(DPQ)
-# IP = np.log10(IP)
-# IQ = np.log10(IQ)
 
 fig, axs = plt.subplots(2, 3)
 axu, axl = axs
@@ -361,6 +358,7 @@ def onclick(event):
         ip = IP
     elif mode == 1:
         ip = IQ
+
     ipmin = np.nanmin(ip)
     ipmax = np.nanmax(ip)
     csd3 = ax3.contourf(
@@ -369,8 +367,10 @@ def onclick(event):
         ip,
         alpha=0.75,
         cmap=cmap,
-        levels=np.linspace(ipmin, ipmax, 10),
+        locator=ticker.LogLocator(),
+        levels=np.logspace(log10(ipmin), log10(ipmax), 10),
     )
+
     _, top = ax3.get_ylim()
     axins3 = inset_axes(
         ax3,
@@ -389,8 +389,10 @@ def onclick(event):
         ip,
         alpha=0.75,
         cmap=cmap,
-        levels=np.linspace(ipmin, ipmax, 10),
+        locator=ticker.LogLocator(),
+        levels=np.logspace(log10(ipmin), log10(ipmax), 10),
     )
+
     _, top = ax6.get_ylim()
     axins6 = inset_axes(
         ax6,

@@ -2,6 +2,7 @@ import numpy as np
 import numpy.ma as ma
 from math import floor
 import matplotlib as mpt
+from matplotlib import ticker
 import matplotlib.pyplot as plt
 from HeWu.modelBLAST1984 import airburst
 from HeWu.modelAWG1980 import _D_up, _I
@@ -97,10 +98,6 @@ DPQ = ma.masked_where(DPQ is None, DPQ)
 IP = IP / 1e3
 IQ = IQ / 1e3
 
-# DPP = np.log10(DPP)
-# DPQ = np.log10(DPQ)
-# IP = np.log10(IP)
-# IQ = np.log10(IQ)
 
 fig, axs = plt.subplots(2, 3)
 axu, axl = axs
@@ -368,7 +365,8 @@ def onclick(event):
         ip,
         alpha=0.75,
         cmap=cmap,
-        levels=np.linspace(ipmin, ipmax, 10),
+        locator=ticker.LogLocator(),
+        levels=np.logspace(log10(ipmin), log10(ipmax), 10),
     )
     _, top = ax3.get_ylim()
     axins3 = inset_axes(
@@ -380,7 +378,7 @@ def onclick(event):
         bbox_to_anchor=(-1.25 * top / 10, 0, top / 10, top),
         bbox_transform=ax3.transData,
     )
-    cbar3 = fig.colorbar(csd3, cax=axins3, format="%.2f", label="冲量（千帕-秒）")
+    cbar3 = fig.colorbar(csd3, cax=axins3, format="%.1E", label="冲量（千帕-秒）")
 
     csd6 = ax6.contourf(
         x,
@@ -388,7 +386,8 @@ def onclick(event):
         ip,
         alpha=0.75,
         cmap=cmap,
-        levels=np.linspace(ipmin, ipmax, 10),
+        locator=ticker.LogLocator(),
+        levels=np.logspace(log10(ipmin), log10(ipmax), 10),
     )
     _, top = ax6.get_ylim()
     axins6 = inset_axes(
@@ -401,7 +400,7 @@ def onclick(event):
         bbox_transform=ax6.transData,
     )
 
-    cbar6 = fig.colorbar(csd6, cax=axins6, format="%.2f", label="冲量（千帕-秒）")
+    cbar6 = fig.colorbar(csd6, cax=axins6, format="%.1E", label="冲量（千帕-秒）")
 
     axins2.yaxis.set_ticks_position("left")
     axins2.yaxis.set_label_position("left")

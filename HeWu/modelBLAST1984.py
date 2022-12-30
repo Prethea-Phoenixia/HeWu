@@ -263,15 +263,14 @@ def airburst(Y, HOB, GR):
         pass
     else:
         xe = 138.3 / (1 + 45.5 / SHOB)
-        # e = clamp(abs((SGR - xm) / (xe - SGR)), 50, 0.02)
-        e = abs((SGR - xm) / (xe - SGR))
+        e = clamp(abs((SGR - xm) / (xe - SGR)), 50, 0.02)
         w = 0.583 / (1 + 2477 / SHOB**2)
 
         d = 0.23 + w + 0.27 * e + e**5 * (0.5 - w)
         a = (d - 1) * (1 - 1 / (1 + e ** (-20)))
 
-        # dt = max(SHOB * (SGR - xm) ** 1.25 / 8.186e5, 1e-12)
-        dt = SHOB * (SGR - xm) ** 1.25 / 8.186e5
+        dt = max(SHOB * (SGR - xm) ** 1.25 / 8.186e5, 1e-12)
+
         vo = SHOB**6 / (2445 * (1 + SHOB**6.75 / 3.9e4) * (1 + 9.23 * e**2))
         co = (1.04 - 1.04 / (1 + 3.725e7 / SGR**4)) / (
             (a + 1) * (1 + 9.872e8 / SHOB**9)
