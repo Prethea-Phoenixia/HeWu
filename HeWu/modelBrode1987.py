@@ -96,6 +96,7 @@ def _DeltaP(GR, H, W, t):
     GR: ground range in feet
     H: burst height in feet
     W: yield in kiloton
+    t: time in seconds
 
     """
     m = W ** (1 / 3)
@@ -136,6 +137,8 @@ def _DeltaP(GR, H, W, t):
     else:
         # tau = _u(rm) + _w(r) - _w(rm) # _w equivalent to _T for 2kT
         tau = _T(Xm * m, H, 1) + _T(GR, H, 2) - _T(Xm * m, H, 2)
+
+    # print(tau * m)
 
     s2 = (
         1
@@ -257,4 +260,5 @@ def _DeltaP(GR, H, W, t):
 
 
 if __name__ == "__main__":
-    print(_DeltaP(362, 0.01, 1, 0.056 + 0.055))
+    for i in range(100):
+        print(_DeltaP(151, 107, 1, 14.5 / 1000 + i / 10000))

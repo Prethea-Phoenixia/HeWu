@@ -7,7 +7,7 @@ in BLAST.EXE from Horizons Technology for the Defense Nuclear Agency
 dating to 1984. 
 
 The dynamic pressure duration and impulse are untrustworthy. Please see 
-the 87 Brode model.
+the 87 Brode model. 
 """
 
 
@@ -100,8 +100,12 @@ def freeair(Y, ALT, RANGE):
     return PFREE, QFREE, TAFREE, withinLimit
 
 
-def airburst(Y, HOB, GR):
+def airburst(Y, HOB, GR, prettyPrint=True):
     """
+    Does airburst calculation ala the BLAST.EXE software, and pretty prints a
+    fascimile out. No provision is given for time-dependent calculations as
+    those are only useful for specialist purposes.
+
     inputs:
     Y: yield, kt
     ALT: burst height, m
@@ -124,6 +128,9 @@ def airburst(Y, HOB, GR):
     limit3: whether the IQTOTAL and DPQ estimations are within limit.
     (this model is only applicable in the mach reflection region for these
     parameters)
+
+    limits checked against are the ABSOLUTE LIMIT given in the original documen-
+    tation. a "*" provides an visual cue for this condition in the printout.
     """
     if HOB < 0:
         raise ValueError("model is not applicable to underground bursts")
@@ -410,11 +417,64 @@ def airburst(Y, HOB, GR):
     if GR < LM or GR > 4000 * Y3:
         limit3 = False
 
-    """ sanitize the output to remove misleading elements"""
-    if GR < XM:
-        HTP = None  # triple point cannot exist inside of mach stem formation range
-        IQTOTAL = None  # there is still dynamic pressure yet we cannot model it.
-        DPQ = None
+    if prettyPrint:
+        """facsimile of the original BLAST interface"""
+        print("INPUTS")
+        print("{:.<40} {:,.6g} {}".format("Weapon yield", Y, "kT"))
+        print("{:.<40} {:,.6g} {}".format("Height of burst", HOB, "m"))
+        print("{:.<40} {:,.6g} {}".format("Ground range", GR, "m"))
+        print("\nOUTPUTS")
+        print(
+            "{:.<40}{}{:,.6g} {}".format(
+                "Air-burst peak overpressure", (" " if limit1 else "*"), PAIR, "Pa"
+            )
+        )
+        print(
+            "{:.<40}{}{:,.6g} {}".format(
+                "Air-burst peak dynamic pressure", (" " if limit1 else "*"), QAIR, "Pa"
+            )
+        )
+        print(
+            "{:.<40}{}{:,.6g} {}".format(
+                "Air-burst time-of-arrival", (" " if limit1 else "*"), TAAIR, "s"
+            )
+        )
+        print(
+            "{:.<40}{}{:,.6g} {}".format(
+                "Mach stem formation range", (" " if limit2 else "*"), XM, "m"
+            )
+        )
+        if HTP is not None:
+            print(
+                "{:.<40}{}{:,.6g} {}".format(
+                    "Mach stem triple point height", (" " if limit2 else "*"), HTP, "m"
+                )
+            )
+        else:
+            print("{:.<40} ######".format("Mach stem triple point height"))
+        print(
+            "{:.<40}{}{:,.6g} {}".format(
+                "Overpressure total impulse", (" " if limit1 else "*"), IPTOTAL, "Pa-s"
+            )
+        )
+        print(
+            "{:.<40}{}{:,.6g} {}".format(
+                "Dynamic pressure total impulse",
+                (" " if limit3 else "*"),
+                IQTOTAL,
+                "Pa-s",
+            )
+        )
+        print(
+            "{:.<40}{}{:,.6g} {}".format(
+                "Overpres. pos. phase duration", (" " if limit1 else "*"), DPP, "s"
+            )
+        )
+        print(
+            "{:.<40}{}{:,.6g} {}".format(
+                "Dyn. pres. pos. phase duration", (" " if limit3 else "*"), DPQ, "s"
+            )
+        )
 
     return (
         PAIR,
@@ -433,6 +493,4 @@ def airburst(Y, HOB, GR):
 
 
 if __name__ == "__main__":
-    print(*airburst(40, 738.3, 446.4), sep="\n")
-
-    print("----------------------------")
+    airburst(40, 738.3, 446.4)

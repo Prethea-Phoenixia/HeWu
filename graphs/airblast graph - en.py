@@ -63,7 +63,7 @@ for gr in x:
             height += 0.01
 
         p, q, t, ip, dpp, t1, xm, htp, t2, iq, dpq, t3 = airburst(
-            Y, height, groundRange
+            Y, height, groundRange, False
         )
 
         # LM = max(80 * Y3, 1.3 * xm)
