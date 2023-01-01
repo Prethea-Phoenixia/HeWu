@@ -11,6 +11,7 @@ CONTRACT No. DNA 001-85-C-0089
 
 Specifically, the below came from SECTION 4.
 """
+from math import log10, exp
 
 
 def _DeltaP_s(GR, H, W):
@@ -65,6 +66,7 @@ def _DeltaP_s(GR, H, W):
 def _T(GR, H, W):
     """
     close-in time of arrival versus shock radius, in millisecond, eq.41
+    intended as a helper function for DeltaP
 
     "is valid for 1e-3 < T < 26,000 ms at 1 KT. This more complex fit is
      advisable for pressures above 10,000 psi, or scaled times less
@@ -137,8 +139,6 @@ def _DeltaP(GR, H, W, t):
     else:
         # tau = _u(rm) + _w(r) - _w(rm) # _w equivalent to _T for 2kT
         tau = _T(Xm * m, H, 1) + _T(GR, H, 2) - _T(Xm * m, H, 2)
-
-    # print(tau * m)
 
     s2 = (
         1
@@ -259,6 +259,61 @@ def _DeltaP(GR, H, W, t):
         return _DeltaP_s(GR, H, W) * b
 
 
+def _Q_1(x, y, xq):
+    """
+    helper function for _Q_s
+    """
+
+    r = (x**2 + y**2) ** 0.5
+    M = xq / x
+
+    A = -236.1 + 17.72 * M**0.593 / (1 + 10.4 * M**3.124)
+    B = 12.27 - 21.69 * M**2.24 / (1 + 6.976 * M**0.484)
+    C = 20.26 + 14.7 * M**2 / (1 + 0.08747 * M**3.05)
+    D = -1.137 - 0.5606 * M**0.895 / (1 + 3.046 * M**7.48)
+    E = 1.731 + 10.84 * M**1.12 / (1 + 12.26 * M**0.0014)
+    F = 2.84 + 0.855 * M**0.9 / (1 + 1.05 * M**2.84)
+
+    return A * r**D / (1 + B * r**E) + C / r**F
+
+
+def _Q_s(GR, H, W):
+    """
+    Peak (horizontal) dynamic pressure in psi
+
+    GR: ground range, feet
+    H: burst height, feet
+    W: yield, kiloton
+    """
+    m = W ** (1 / 3)
+    x = GR / 1000 / m  # scaled ground range in kft/kt^1/3
+    y = H / 1000 / m  # scaled ground range in kft/kft^1/3
+
+    r = (x**2 + y**2) ** 0.5
+
+    xq = (
+        63.5 * y**7.26 / (1 + 67.11 * y**4.746) + 0.6953 * y**0.808
+    )  # approximate interface between regular and Mach reflection in kft/kt^(1/3)
+
+    Q1 = _Q_1(x, y, xq)
+    Qm = _Q_1(xq, y, xq)  # Q_1 evaluated at x=xq, and M = 1
+
+    G = 50 - 1843 * y**2.153 / (1 + 3.95 * y**5.08)
+    H = 0.294 + 71.56 * y**8.7 / (1 + 115.3 * y**6.186)
+    I = abs(-3.324 + 987.5 * y**4.77 / (1 + 211.8 * y**5.166))
+    J = 1.955 + 169.7 * y**9.317 / (1 + 97.36 * y**6.513)
+    K = 8.123e-6 + 0.001613 * y**6.428 / (1 + 60.26 * y**7.358)
+    L = log10(xq / x)
+
+    if x >= xq:
+        return Q1
+    else:
+        return Qm * exp(
+            G * L**I / (1 + 649 * L**I)
+            - 4.01 * L**J / (1 + H * L**J)
+            + 7.67e-6 * (1 / (K + L**3.22) - 1 / K)
+        )
+
+
 if __name__ == "__main__":
-    for i in range(100):
-        print(_DeltaP(151, 107, 1, 14.5 / 1000 + i / 10000))
+    print(_Q_s(350, 250, 1))
