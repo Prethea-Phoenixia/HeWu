@@ -32,12 +32,12 @@ lowXs = floor(xmed / delta)
 lowYs = floor(ymed / delta)
 
 x = np.append(
-    np.arange(delta / 1e3, xmed / 1e3, delta / 1e3),
+    np.arange(0, xmed / 1e3, delta / 1e3),
     np.arange(xmed / 1e3, (xmax + delta) / 1e3, 5 * delta / 1e3),
 )  # in kilometer
 
 y = np.append(
-    np.arange(delta / 1e3, ymed / 1e3, delta / 1e3),
+    np.arange(0, ymed / 1e3, delta / 1e3),
     np.arange(ymed / 1e3, (ymax + delta) / 1e3, 5 * delta / 1e3),
 )  # in kilometer
 
@@ -84,7 +84,7 @@ for gr in x:
             IQ[j][i] = iq
             DPQ[j][i] = dpq
         else:
-            IQ[j][i] = _I(groundRange / 304.8, height / 304.8, Y) * 6894.76
+            IQ[j][i] = _I(groundRange / 304.8, height / 304.8, Y) * 6894.76 / 1e3
             DPQ[j][i] = _D_up(groundRange / 304.8, height / 304.8, Y) / 1e3
 
         j += 1

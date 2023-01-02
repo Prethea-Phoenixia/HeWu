@@ -21,6 +21,12 @@ y  y=RM/x=RF
 
 """
 
+from HeWu.uc import _uc_m2kft, _uc_psi2pa
+
+"""minimum value the scaled ground range and burst height are clamped to, 
+in order to simulate a "zero" in kft/kT^(1/3)"""
+minimum = 1e-3
+
 
 def _t_fa(r, W):
     """
@@ -28,7 +34,7 @@ def _t_fa(r, W):
     W: yield, kilotons
     r: slant range, kft
     """
-
+    r = max(r, 2**0.5 * minimum)
     m = W ** (1 / 3)
 
     return (
@@ -45,6 +51,10 @@ def _t_a(gr, hob, W):
     hob: height of burst, kilofeet
     W: yield, kiloton
     """
+
+    gr = max(gr, minimum)
+    hob = max(hob, minimum)
+
     r = (gr**2 + hob**2) ** 0.5
     if gr < hob:
         return _t_fa(r, W)
@@ -79,6 +89,8 @@ def _inv_t_a(tgt, g1, g2, hob, W, vlim=1e-6):
 
     while abs(fb - fa) >= vlim:  # to be conservative, one more iteration
         c = b - fb * (b - a) / (fb - fa)
+        if c < 0:
+            c = 0  # clamp to force positive solution
         fc = f(c)
         fa = fb
         a = b
@@ -122,7 +134,6 @@ def _PJ(y):
     """
     pressure along the y = RM or x = RF line:
     """
-
     RI = (_RF(y) + y**2) ** 0.5
     return 14.35 / RI**1.45 + 0.056 + 4 / RI**3.71 - 0.171 / RI**4.716
 
@@ -164,10 +175,11 @@ def _DeltaP_s(x, y):
     x: scaled ground range in kft/kT**(1/3)
     y: scaled burst height in kft/kT**(1/3)
     """
+    x = max(x, minimum)
+    y = max(y, minimum)
 
     RF = _RF(y)
     RA = _RA(x)
-
     PD = _PD(x)
     PK = _PK(y)
     PE = _PE(x)
@@ -228,6 +240,10 @@ def _Q_H(x, y, P_0=14.7):
     DeltaP_s: overpressure in psi
     P_0: ambient pressure in psi
     """
+
+    x = max(x, minimum)
+    y = max(y, minimum)
+
     if x < y:
         """in regular reflection region, flow is constrained to horizontal
         velocity only"""
@@ -239,6 +255,16 @@ def _Q_H(x, y, P_0=14.7):
 
 
 def _D_up(gr, hob, W):
+    """
+    Dynamic pressure positive phase duration in msec
+
+    gr: ground range under concern in kft
+    hob: burst height in kft
+    W: yield in kt
+    """
+    gr = max(gr, minimum)
+    hob = max(hob, minimum)
+
     r = (gr**2 + hob**2) ** 0.5
     m = (2 * W) ** (1 / 3)  # m'
     D_up = (
@@ -260,8 +286,10 @@ def _I(gr_0, hob, W):
     hob: burst height in kft
     W: yield in kt
 
-    returns impulse in psi-sec
+    returns impulse in psi-msec
     """
+    gr_0 = max(gr_0, minimum)
+    hob = max(hob, minimum)
 
     t_0 = _t_a(gr_0, hob, W)
     m = W ** (1 / 3)
@@ -270,12 +298,12 @@ def _I(gr_0, hob, W):
     D_up = _D_up(gr_0, hob, W)
 
     IQ = 0
-    N = 33
+    N = 35
     dt = D_up / N
 
     for i in range(N):
         t = dt * (i + 0.5) + t_0
-        gr = _inv_t_a(t, gr_0, gr_0 * 2 + 0.01, hob, W)
+        gr = _inv_t_a(t, gr_0, gr_0 * 2 + minimum, hob, W)
         r = (gr**2 + hob**2) ** 0.5
         n = (
             0.7917
@@ -287,51 +315,69 @@ def _I(gr_0, hob, W):
 
         IQ += Q * dt
 
-    IQ /= 1000
     return IQ
 
 
-def airburst(gr, hob, W, prettyPrint=True):
+def airburst(GR, HOB, W, prettyPrint=True):
     """
     Pretty print an airburst calculation:
-    gr: ground range in kilofeet
-    hob: height of burst in kilofeet
+    GR: ground range in meters
+    HOB: height of burst in meter
     W: yield, kiloton
 
     returns:
-    peak op,
-    peak hz. dp,
-    toa
-    dp pos phase dur
-    dp hz impulse
-
+    peak overpressure, in psi -> pa
+    peak dyn. press. in psi -> pa
+    time of arrival in millisecond -> sec
+    dynm.press.pos.phase duration in millisecond -> sec
+    hz.dynm.press.impulse in psi-msec -> pa-sec
     """
 
+    gr = _uc_m2kft(GR)  # gr: ground range in kilofeet
+    hob = _uc_m2kft(HOB)  # hob: height of burst in kilofeet
+
     m = W ** (1 / 3)
+
     t_a = _t_a(gr, hob, W)
+    TAAIR = t_a / 1000
+
     DeltaP_s = _DeltaP_s(gr / m, hob / m)
+    PAIR = _uc_psi2pa(DeltaP_s)
+
     D_up = _D_up(gr, hob, W)
+    DPQ = D_up / 1000
+
     Q_s = _Q_s(DeltaP_s)
+    QAIR = _uc_psi2pa(Q_s)
+
     Q_H = _Q_H(gr / m, hob / m)
     IQ = _I(gr, hob, W)
 
+    IQTOTAL = _uc_psi2pa(IQ) / 1000
+
     if prettyPrint:
-        print("YIELD           = {:>10.3f} kT".format(W))
-        print("HEIGHT OF BURST = {:>10.3f} kft".format(hob))
-        print("GROUND RANGE    = {:>10.3f} kft".format(gr))
+        print("YIELD           = {:>15,.6g} kT".format(W))
+        print("HEIGHT OF BURST = {:>15,.6g} m".format(HOB))
+        print("GROUND RANGE    = {:>15,.6g} m".format(GR))
 
         print("------------------{:->10}---------".format(""))
 
-        print("PEAK OVERPRES.  = {:>10.3f} psi".format(DeltaP_s))
-        print("PEAK DYN.P      = {:>10.3f} psi".format(Q_s))
-        print("PEAK HZ.DYN.P.  = {:>10.3f} psi".format(Q_H))
-        print("TIME OF ARRIVAL = {:>10.3f} msec".format(t_a))
-        print("DYN.P.POS.PHASE = {:>10.3f} msec".format(D_up))
-        print("HZ.DYN.IMPULSE  = {:>10.3f} psi-sec".format(IQ))
+        print("PEAK OVERPRES.  = {:>15,.6g} pa".format(PAIR))
+        print("PEAK DYN.P      = {:>15,.6g} pa".format(QAIR))
+        print("PEAK HZ.DYN.P.  = {:>15,.6g} pa".format(_uc_psi2pa(Q_H)))
+        print("TIME OF ARRIVAL = {:>15,.6g} sec".format(TAAIR))
+        print("DYN.P.POS.PHASE = {:>15,.6g} sec".format(DPQ))
+        print("HZ.DYN.IMPULSE  = {:>15,.6g} pa-s".format(IQTOTAL))
         print("")
 
-    return DeltaP_s, Q_H, t_a, D_up, IQ
+    return (
+        PAIR,
+        QAIR,
+        TAAIR,
+        DPQ,
+        IQTOTAL,
+    )
 
 
 if __name__ == "__main__":
-    airburst(7.004, 2.394, 40)
+    airburst(679, 999, 40)
