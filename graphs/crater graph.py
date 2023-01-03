@@ -20,7 +20,8 @@ from matplotlib.ticker import MultipleLocator
 
 mpt.rc("font", family="Microsoft YaHei")
 
-Y = 1
+Y = 250
+
 Y3 = Y ** (1 / 3.1)
 
 

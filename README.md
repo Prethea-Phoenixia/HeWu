@@ -1,6 +1,9 @@
 # HeWu
 A Python package modeling effects of nuclear weapons, using public domain knowledge. 
 
+# Status
+Under active development
+
 # Q&A
 * What is HeWu?\
 HeWu came from the pronunciation of 核武, lit. "nuclear armament", in Chinese.

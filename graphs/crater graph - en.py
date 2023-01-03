@@ -9,7 +9,7 @@ from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from matplotlib.ticker import MultipleLocator
 
 
-Y = 1
+Y = 1000
 Y3 = Y ** (1 / 3.1)
 
 

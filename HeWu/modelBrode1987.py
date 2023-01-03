@@ -13,6 +13,8 @@ Specifically, the below came from SECTION 4.
 """
 from math import log10, exp
 
+from HeWu.util import intg
+
 
 def _DeltaP_s(GR, H, W):
     """
@@ -66,7 +68,7 @@ def _DeltaP_s(GR, H, W):
 def _T(GR, H, W):
     """
     close-in time of arrival versus shock radius, in millisecond, eq.41
-    intended as a helper function for DeltaP
+    intended as a helper function
 
     "is valid for 1e-3 < T < 26,000 ms at 1 KT. This more complex fit is
      advisable for pressures above 10,000 psi, or scaled times less
@@ -89,16 +91,73 @@ def _T(GR, H, W):
     return m * a / (b + c)
 
 
-def _DeltaP(GR, H, W, t):
+def _Xm(GR, H, W):
     """
-    Overpressure over time in psi, eq.61. Result is complex if supplied time
-    is less than that of blast arrival time. Verified against graphs in the
-    original work to be in excellent agreement.
+    onset of Mach reflection locus, scaled, in ft per kT**(1/3)
+
+    GR: ground range in feet
+    H: height of burst in feet
+    W: yield in kiloton
+    """
+    m = W ** (1 / 3)
+    X = GR / m  # ft/kT^(1/3)
+    Y = H / m  # ft/kT^(1/3)
+
+    Xm = 170 * Y / (1 + 60 * Y**0.25) + 2.89 * (Y / 100) ** 2.5
+    return Xm
+
+
+def _tau(GR, H, W):
+    """
+    scaled time of arrival for GR and H, in ms/kT^(1/3),
+    based on Eq. (41),
+
+    GR: ground range in feet
+    H: height of burst in feet
+    W: yield in kiloton
+    """
+    m = W ** (1 / 3)
+    X = GR / m  # ft/kT^(1/3)
+    Y = H / m  # ft/kT^(1/3)
+
+    Xm = _Xm(GR, H, W)
+
+    if X <= Xm:
+        # tau = _u(r) # _u equivalent to _T
+        tau = _T(GR, H, 1)
+    else:
+        # tau = _u(rm) + _w(r) - _w(rm) # _w equivalent to _T
+        tau = _T(Xm * m, H, 1) + _T(GR, H, 2) - _T(Xm * m, H, 2)
+
+    return tau
+
+
+def _DeltaP(GR, H, W, t, integrate=True):
+    """
+    Overpressure over time in psi, Verified against graphs in the original work
+    to be in excellent agreement. This time-dependent formulation is fitted to
+    the BM-3 cratering calculation impulses [Pyatt, 1983] in the close-in range
+    (scaled ground range between 25 and 100ft, or peak pressure between 1.5-150
+    ksi). This may not be correct, "although further calculation are being made
+    to verify that region of the BM-3 calculation. It has been suggested that the
+    lower impulse may be due ot the quenching effect of cratering ejected into the
+    fireball"
+
+    input:
 
     GR: ground range in feet
     H: burst height in feet
     W: yield in kiloton
-    t: time in seconds
+    t: time or times in milliseconds.
+
+    integrate: boolean value, controls whether an integration is done over time
+    from the time of arrival to the supplied time.
+
+    return:
+        integrate = False:
+            overpressure in psi
+        integrate = True:
+            overpressure in psi, overpressure in psi-ms
 
     """
     m = W ** (1 / 3)
@@ -107,19 +166,15 @@ def _DeltaP(GR, H, W, t):
 
     z = H / GR
 
-    sigma = t * 1000  # presumably, in ms
-
-    Xm = (
-        170 * Y / (1 + 60 * Y**0.25) + 2.89 * (Y / 100) ** 2.5
-    )  # onset of Mach reflection locus, scaled, in ft per kT**(1/3)
+    Xm = _Xm(GR, H, W)  # onset of Mach reflection locus, scaled, in ft per kT**(1/3)
 
     Xe = (
         3.039 * Y / (1 + 0.0067 * Y)
     )  # locus of points where second peak equals first peak, scaled in ft per kT**(1/3)
 
     K = abs((X - Xm) / (Xe - Xm))
-    d2 = 2.99 + 31240 * (Y / 100) ** 9.86 / (1 + 15530 * (Y / 100) ** 9.87)
 
+    d2 = 2.99 + 31240 * (Y / 100) ** 9.86 / (1 + 15530 * (Y / 100) ** 9.87)
     d = (
         0.23
         + 0.583 * Y**2 / (26667 + Y**2)
@@ -130,15 +185,8 @@ def _DeltaP(GR, H, W, t):
     a = (d - 1) * (1 - K**20 / (1 + K**20))
 
     r = (X**2 + Y**2) ** 0.5 / 1000
-    # rm = (Xm**2 + Y**2) ** 0.5 / 1000  # assumedly, this eq is missing from original
 
-    # scaled time of arrival in milliseconds per cube-root kiloton, based on Eq. (41),
-    if X <= Xm:
-        # tau = _u(r) # _u equivalent to _T for 1kT
-        tau = _T(GR, H, 1)
-    else:
-        # tau = _u(rm) + _w(r) - _w(rm) # _w equivalent to _T for 2kT
-        tau = _T(Xm * m, H, 1) + _T(GR, H, 2) - _T(Xm * m, H, 2)
+    tau = _tau(GR, H, W)
 
     s2 = (
         1
@@ -178,7 +226,7 @@ def _DeltaP(GR, H, W, t):
     f2 = (
         (
             0.445
-            - 5.44 * r**1.02 / (1 + 100000 * r**5.84)
+            - 5.44 * r**1.02 / (1 + 1e5 * r**5.84)
             + 7.571 * z**7.15 / (1 + 5.135 * z**12.9)
             - 8.07 * z**7.31 / (1 + 5.583 * z**12.23)
         )
@@ -218,16 +266,7 @@ def _DeltaP(GR, H, W, t):
         - 0.1966 * tau**1.22 / (1 + 0.767 * tau**1.22)
     )
 
-    j = min(
-        11860 * (sigma - tau) / (Y * abs(X - Xm) ** 1.25), 200
-    )  # ratio of time after TOA to time to second peak after TOA,
-    # this absolute operation around X-Xm is inferred.
-
-    v = 1 + (
-        0.003744 * (Y / 10) ** 5.185 / (1 + 0.004684 * (Y / 10) ** 4.189)
-        + 0.004755 * (Y / 10) ** 8.049 / (1 + 0.003444 * (Y / 10) ** 7.497)
-        - 0.04852 * (Y / 10) ** 3.423 / (1 + 0.03038 * (Y / 10) ** 2.538)
-    ) * j**3 / (6.13 + j**3) / (1 + 9.23 * K**2)
+    # supporting values for calculatng c. Time-independent
 
     c2 = 23000 * (Y / 100) ** 9 / (1 + 23000 * (Y / 100) ** 9)
     c3 = 1 + (
@@ -238,25 +277,62 @@ def _DeltaP(GR, H, W, t):
         - 0.15
     ) / (1 + 0.5089 * K**13)
 
-    c = (
-        (
-            (1.04 - 0.02409 * (X / 100) ** 4 / (1 + 0.02317 * (X / 100) ** 4))
-            * j**7
-            / ((1 + a) * (1 + 0.923 * j**8.5))
+    """
+    we split the calculation of v into v = v0 * vj to simplify per iteration
+    calculation
+    """
+    v0 = 1 + (
+        0.003744 * (Y / 10) ** 5.185 / (1 + 0.004684 * (Y / 10) ** 4.189)
+        + 0.004755 * (Y / 10) ** 8.049 / (1 + 0.003444 * (Y / 10) ** 7.497)
+        - 0.04852 * (Y / 10) ** 3.423 / (1 + 0.03038 * (Y / 10) ** 2.538)
+    ) / (1 + 9.23 * K**2)
+
+    def atSigma(sigma):
+        """partial function, implicitly inheriting the non-time-dependent factors
+        sigma: scaled time in question
+        """
+
+        j = min(
+            11860 * (sigma - tau) / (Y * abs(X - Xm) ** 1.25), 200
+        )  # ratio of time after TOA to time to second peak after TOA,
+        # this absolute operation around X-Xm is inferred.
+
+        v = v0 * j**3 / (6.13 + j**3)
+
+        c = (
+            (
+                (1.04 - 0.02409 * (X / 100) ** 4 / (1 + 0.02317 * (X / 100) ** 4))
+                * j**7
+                / ((1 + a) * (1 + 0.923 * j**8.5))
+            )
+            * (c2 + (1 - c2) * (1 - 0.09 * K**2.5 / (1 + 0.09 * K**2.5)))
+            * c3
+            * (1 - ((sigma - tau) / D) ** 8)
+        )  # this is harder to split into time and non-time dependent part and left as is
+
+        b = (f * (tau / sigma) ** g + (1 - f) * (tau / sigma) ** h) * (
+            1 - (sigma - tau) / D
         )
-        * (c2 + (1 - c2) * (1 - 0.09 * K**2.5 / (1 + 0.09 * K**2.5)))
-        * c3
-        * (1 - ((sigma - tau) / D) ** 8)
-    )
 
-    b = (f * (tau / sigma) ** g + (1 - f) * (tau / sigma) ** h) * (
-        1 - (sigma - tau) / D
-    )
+        if X >= Xm and Y <= 380:
+            return (1 + a) * (b * v + c)
+        else:
+            return b
 
-    if X >= Xm and Y <= 380:
-        return _DeltaP_s(GR, H, W) * (1 + a) * (b * v + c)
+    DeltaP_s = _DeltaP_s(GR, H, W)
+
+    sigma = t / m  # sigma is the scaled time in ms/kT^(1/3)
+
+    if sigma < tau:
+        raise ValueError("blast wave hasn't arrived at the specified time")
+
+    if integrate:
+        """the integral DeltaP_s * intg(atSigma, tau, sigma)[0]
+        is the scaled overpressure total impulse, psi-ms/kT^(1/3)
+        """
+        return DeltaP_s * atSigma(sigma), DeltaP_s * intg(atSigma, tau, sigma)[0] * m
     else:
-        return _DeltaP_s(GR, H, W) * b
+        return DeltaP_s * atSigma(sigma)
 
 
 def _Q_1(x, y, xq):
@@ -316,4 +392,5 @@ def _Q_s(GR, H, W):
 
 
 if __name__ == "__main__":
-    print(_Q_s(350, 250, 1))
+    print(_tau(82.02, 50, 1))
+    print(_DeltaP(151, 107, 1, _tau(151, 107, 1) + 10, integrate=True))
