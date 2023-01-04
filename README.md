@@ -1,16 +1,12 @@
 # HeWu
-A Python package modeling effects of nuclear weapons, using public domain knowledge. 
+A Python package modeling effects of nuclear weapons, using public domain knowledge.\
+\
+HeWu came from the pronunciation of 核武, lit. "nuclear armament", in Chinese. It aims to provide an accessible interface to the best public domain nuclear weapon effects model, for the purpose of public information.\
+\
+Empirical models based on fitting to detailed calculations are preferred, and whenever possible, multiple sources are consulted and cross referenced with outstanding deviations noted.
 
 # Status
-Under active development
-
-# Q&A
-* What is HeWu?\
-HeWu came from the pronunciation of 核武, lit. "nuclear armament", in Chinese.
-* Who are you?\
-A 20 something Chinese student studying Software Engineering with an interest in physics and engineering.
-* What are your sources and where can i find them? Do you have a contact email?\
-See the preamble in each model file.
+under active development.
 
 # Prior Work
 these work have been very inspirational and helpful.
