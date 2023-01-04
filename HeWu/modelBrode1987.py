@@ -12,6 +12,7 @@ CONTRACT No. DNA 001-85-C-0089
 Specifically, the below came from SECTION 4.
 """
 from math import log10, exp
+from uc import _uc_m2ft, _uc_psi2pa, _uc_ft2m
 
 from HeWu.util import intg
 
@@ -93,7 +94,8 @@ def _T(GR, H, W):
 
 def _Xm(GR, H, W):
     """
-    onset of Mach reflection locus, scaled, in ft per kT**(1/3)
+    scaled range at which Mach reflection begins for a given burst height,
+    onset of Mach reflection locus,in ft per kT**(1/3)
 
     GR: ground range in feet
     H: height of burst in feet
@@ -125,12 +127,14 @@ def _tau(GR, H, W, Xm=None):
     if Xm is None:
         Xm = _Xm(GR, H, W)
 
-    if X <= Xm:
+    if X <= Xm:  # free-air burst toa
         # tau = _u(r) # _u equivalent to _T
-        tau = _T(GR, H, 1)
-    else:
-        # tau = _u(rm) + _w(r) - _w(rm) # _w equivalent to _T
-        tau = _T(Xm * m, H, 1) + _T(GR, H, 2) - _T(Xm * m, H, 2)
+        # tau = _T(GR, H, 1)
+        tau = _T(GR, H, W) / m
+    else:  # surface burst toa
+        # tau = _u(rm) + _w(r) - _w(rm) # _w equivalent to _T with 2 kT
+        # tau = _T(Xm * m, H, 1) + _T(GR, H, 2) - _T(Xm * m, H, 2)
+        tau = (_T(Xm * m, H, W) + _T(GR, H, 2 * W) - _T(Xm * m, H, 2 * W)) / m
 
     return tau
 
@@ -654,7 +658,115 @@ def _Q_s(GR, H, W):
         )
 
 
+def _I_u_pos(GR, H, W):
+    """
+    simple fit for integral of dynamic pressure with time over the positive
+    (outward flow) phase. This is only valid in the Mach reflection region
+    but is computationally simpler than integration routine above.
+
+    """
+    m = W ** (1 / 3)
+    x = GR / 1000 / m
+    y = H / 1000 / m
+
+    psi = y + 0.09
+
+    E = 183 * (y**2 + 0.00182) / (y**2 + 0.00222)
+    F = 0.00058 * exp(9.5 * y) + 0.0117 * exp(-22 * y)
+    G = 2.3 + 29 * y / (1 + 1760 * y**5) + 25 * y**4 / (1 + 3.76 * y**6)
+
+    if x > 170 * psi / (1 + 337 * psi**0.25) + 0.914 * psi**2.5:  # x> Xi
+        return (E * x / (F + x**3.61) + G / (1 + 0.22 * x**2)) * m
+    else:
+        return None  # not applicable!
+
+
+def _I_p_pos(GR, H, W, DeltaP_s=None, Xm=None):
+    """
+    positive phase impulse in psi-ms
+
+    GR: ground range, feet
+    H: height of burst, feet
+    W: yield, kiloton
+
+    """
+    m = W ** (1 / 3)
+    X = GR / m  # ft/kT^(1/3)
+    Y = H / m  # ft/kT^(1/3)
+
+    if DeltaP_s is None:
+        DeltaP_s = _DeltaP_s(GR, H, W)
+
+    if Xm is None:
+        Xm = _Xm(GR, H, W)
+
+    if X <= Xm:
+        return 145 * DeltaP_s**0.5 / (1 + 0.00385 * DeltaP_s**0.5) * m
+    else:
+        return 183 * DeltaP_s**0.5 / (1 + 0.00385 * DeltaP_s**0.5) * m
+
+
+def airburst(GR_m, H_m, W, prettyPrint=True):
+    """
+    GR: ground range, meter
+    H: height of burst, meter
+    W: yield, kiloton
+
+    """
+    GR = _uc_m2ft(GR_m)
+    H = _uc_m2ft(H_m)
+
+    m = W ** (1 / 3)
+
+    Xm = _Xm(GR, H, W)
+    tau = _tau(GR, H, W, Xm)
+
+    D = _D(GR, H, W, tau)
+    D_u = _D_u(GR, H, W, D)
+
+    XM = _uc_ft2m(Xm * m)
+    TAAIR = tau * m / 1000  # ms to s
+
+    DPP = D / 1000  # ms to s
+    DPQ = D_u / 1000  # ms to s
+
+    DeltaP_s = _DeltaP_s(GR, H, W)
+    Q_s = _Q_s(GR, H, W)
+
+    _, I_p_pos = _DeltaP(GR, H, W, (tau * m + D) * (1 - 1e-6), integrate=True)
+    _, I_u_pos = _Q(GR, H, W, (tau * m + D_u) * (1 - 1e-6), integrate=True)
+
+    I_p_est = _I_p_pos(GR, H, W, DeltaP_s, Xm)
+    I_u_est = _I_u_pos(GR, H, W)
+
+    if I_u_est is None:
+        IQEST = None
+    else:
+        IQEST = _uc_psi2pa(I_u_est / 1000)
+
+    IPEST = _uc_psi2pa(I_p_est / 1000)
+
+    IPTOTAL = _uc_psi2pa(I_p_pos / 1000)
+    IQTOTAL = _uc_psi2pa(I_u_pos / 1000)
+
+    PAAIR = _uc_psi2pa(DeltaP_s)
+    QAAIR = _uc_psi2pa(Q_s)
+
+    if prettyPrint:
+        print("Input")
+        print("Ground Range:\n{:.>20,.6g} m".format(GR_m))
+        print("Burst Height:\n{:.>20,.6g} m".format(H_m))
+        print("Yield:\n{:.>20,.6g} kT".format(W))
+        print("")
+
+        print("{:^24}{:^24}".format("Overpressure", "Dyn.Pres.Hz.Comp."))
+        print("Peak:\n{:.>21,.6g} Pa{:.>21,.6g} Pa".format(PAAIR, QAAIR))
+        print("Duration:\n{:.>22,.6g} s{:.>22,.6g} s".format(DPP, DPQ))
+        print("Impulse:\n{:.>19,.6g} Pa-s{:.>19,.6g} Pa-s".format(IPTOTAL, IQTOTAL))
+        print("..(Est.{:.>12,.6g} Pa-s).(Est:{:.>12,.6g} Pa-s)".format(IPEST, IQEST))
+        print("")
+
+
 if __name__ == "__main__":
-    print(_DeltaP_s(1062, 150, 1))
-    print(_D(1062, 150, 1))
-    print(_DeltaP(1062, 150, 1, _tau(1062, 150, 1) + 160))
+    airburst(1000, 10, 1)
+    airburst(2000, 20, 8)

@@ -12,7 +12,7 @@ def _uc_km2kft(dist):
     Converts distance in kilometers to distance in kilofeet
     dist: distance in kilometers
     """
-    conversion_const = 3.2808  # kilofeet per kilometer
+    conversion_const = 3.28084  # kilofeet per kilometer
     return dist * conversion_const
 
 
@@ -21,7 +21,7 @@ def _uc_kft2km(dist):
     Converts distance in kilofeet to distance in kilometers
     dist: distance in kilofeet
     """
-    conversion_const = 1 / 3.2808  # kilometer per kilofeet
+    conversion_const = 1 / 3.28084  # kilometer per kilofeet
     return dist * conversion_const
 
 
@@ -86,3 +86,21 @@ def _uc_psi2pa(pres):
     """
     conversion_const = 6894.76  # pa per psi
     return pres * conversion_const
+
+
+def _uc_m2ft(dist):
+    """
+    Converts distance in feet to distance in meter
+    dist: distance in feet
+    """
+    conversion_const = 3.28084  # feet per meter
+    return dist * conversion_const
+
+
+def _uc_ft2m(dist):
+    """
+    Converts distance in feet to distance in meter
+    dist: distance in feet
+    """
+    conversion_const = 1 / 3.28084  # meter per foot
+    return dist * conversion_const

@@ -100,16 +100,16 @@ def freeair(Y, ALT, RANGE):
     return PFREE, QFREE, TAFREE, withinLimit
 
 
-def airburst(Y, HOB, GR, prettyPrint=True):
+def airburst(GR, HOB, Y, prettyPrint=True):
     """
     Does airburst calculation ala the BLAST.EXE software, and pretty prints a
     fascimile out. No provision is given for time-dependent calculations as
     those are only useful for specialist purposes.
 
     inputs:
+    GR: ground range, m
+    HOB: burst height, m
     Y: yield, kt
-    ALT: burst height, m
-    RANGE: ground range, m
 
     return:
     PAIR: peak overpressure, pa
