@@ -660,9 +660,13 @@ def _Q_s(GR, H, W):
 
 def _I_u_pos(GR, H, W):
     """
-    simple fit for integral of dynamic pressure with time over the positive
-    (outward flow) phase. This is only valid in the Mach reflection region
-    but is computationally simpler than integration routine above.
+    simple fit for integral of dynamic pressure, psi-ms, with time over the
+    positive (outward flow) phase. This is only valid in the Mach reflection
+    region but is computationally simpler than integration routine above.
+
+    GR: ground range, ft
+    H: height of burst, ft
+    W: yield, kiloton
 
     """
     m = W ** (1 / 3)
@@ -706,7 +710,7 @@ def _I_p_pos(GR, H, W, DeltaP_s=None, Xm=None):
         return 183 * DeltaP_s**0.5 / (1 + 0.00385 * DeltaP_s**0.5) * m
 
 
-def airburst(GR_m, H_m, W, prettyPrint=True):
+def airburst(GR_m, H_m, W, t=None, prettyPrint=True):
     """
     GR: ground range, meter
     H: height of burst, meter
@@ -733,8 +737,8 @@ def airburst(GR_m, H_m, W, prettyPrint=True):
     DeltaP_s = _DeltaP_s(GR, H, W)
     Q_s = _Q_s(GR, H, W)
 
-    _, I_p_pos = _DeltaP(GR, H, W, (tau * m + D) * (1 - 1e-6), integrate=True)
-    _, I_u_pos = _Q(GR, H, W, (tau * m + D_u) * (1 - 1e-6), integrate=True)
+    _, I_p_pos = _DeltaP(GR, H, W, (tau * m + D), integrate=True)
+    _, I_u_pos = _Q(GR, H, W, (tau * m + D_u), integrate=True)
 
     I_p_est = _I_p_pos(GR, H, W, DeltaP_s, Xm)
     I_u_est = _I_u_pos(GR, H, W)
@@ -753,20 +757,67 @@ def airburst(GR_m, H_m, W, prettyPrint=True):
     QAAIR = _uc_psi2pa(Q_s)
 
     if prettyPrint:
-        print("Input")
+        print("{:^49}".format("INPUT"))
         print("Ground Range:\n{:.>20,.6g} m".format(GR_m))
         print("Burst Height:\n{:.>20,.6g} m".format(H_m))
         print("Yield:\n{:.>20,.6g} kT".format(W))
-        print("")
 
-        print("{:^24}{:^24}".format("Overpressure", "Dyn.Pres.Hz.Comp."))
-        print("Peak:\n{:.>21,.6g} Pa{:.>21,.6g} Pa".format(PAAIR, QAAIR))
-        print("Duration:\n{:.>22,.6g} s{:.>22,.6g} s".format(DPP, DPQ))
-        print("Impulse:\n{:.>19,.6g} Pa-s{:.>19,.6g} Pa-s".format(IPTOTAL, IQTOTAL))
-        print("..(Est.{:.>12,.6g} Pa-s).(Est:{:.>12,.6g} Pa-s)".format(IPEST, IQEST))
+        if t is None:
+            pass
+        else:
+            print("Time To:\n{:.>20,.6g} s".format(t))
+
+        print("")
+        print("{:^49}".format("OUTPUT"))
+        print("Time of Arrival:\n{:.>20,.6g} s".format(TAAIR))
+        print("")
+        print("{:>24}{:>24} ".format("Overpressure", "Dyn.Pres.Hz.Comp."))
+        print("{:<24}{:<24} ".format("Peak:", ""))
+        print("{:.>21,.6g} Pa{:.>21,.6g} Pa ".format(PAAIR, QAAIR))
+        print("{:<24}{:<24} ".format("Duration:", ""))
+        print("{:.>22,.6g} s{:.>22,.6g} s ".format(DPP, DPQ))
+        print("{:<24}{:<24} ".format("Impulse:", ""))
+        print(".integral.{:.>9,.6g} Pa-s{:.>19,.6g} Pa-s".format(IPTOTAL, IQTOTAL))
+        if IQEST is None:
+            print(".estimate.{:.>9,.6g} Pa-s{:.>19} Pa-s".format(IPEST, "~~~~~~"))
+        else:
+            print(".estimate.{:.>9,.6g} Pa-s{:.>19,.6g} Pa-s".format(IPEST, IQEST))
+
+        if t is None:
+            pass
+        else:
+            print("")
+            try:
+                PPART, IPPART = _DeltaP(GR, H, W, t * 1000, integrate=True)
+            except ValueError:
+                PPART, IPPART = None, None
+            try:
+                QPART, IQPART = _Q(GR, H, W, t * 1000, integrate=True)
+            except ValueError:
+                QPART, IQPART = None, None
+
+            if (PPART is None) and (QPART is not None):
+                print("{:<24}{:<24} ".format("Pressure at Time:", ""))
+                print("{:.>21} Pa{:.>21,.6g} Pa ".format("~~~~~~", QPART))
+                print("{:<24}{:<24} ".format("Partial Impulse to Time:", ""))
+                print(".integral.{:.>9} Pa-s{:.>19,.6g} Pa-s".format("~~~~~~", IQPART))
+
+            elif (QPART is None) and (PPART is not None):
+                print("{:<24}{:<24} ".format("Pressure at Time:", ""))
+                print("{:.>21,.6g} Pa{:.>21} Pa ".format(PPART, "~~~~~~"))
+                print("{:<24}{:<24} ".format("Partial Impulse to Time:", ""))
+                print(".integral.{:.>9,.6g} Pa-s{:.>19} Pa-s".format(IPPART, "~~~~~~"))
+
+            else:
+                print("{:<24}{:<24} ".format("Pressure at Time:", ""))
+                print("{:.>21,.6g} Pa{:.>21,.6g} Pa ".format(PPART, QPART))
+                print("{:<24}{:<24} ".format("Partial Impulse to Time:", ""))
+                print(
+                    ".integral.{:.>9,.6g} Pa-s{:.>19,.6g} Pa-s".format(IPPART, IQPART)
+                )
+
         print("")
 
 
 if __name__ == "__main__":
-    airburst(1000, 10, 1)
-    airburst(2000, 20, 8)
+    airburst(1, 4, 8, 0.7)
