@@ -1,5 +1,14 @@
 def intg(f, l, u, tol=1e-3):
     """
+    Integration, a.la the HP-34C. For more info see:
+    "Handheld Calculator Evaluates Integrals", William M.Kahan
+    Hewlett Packard Journal, August 1980 Volume 31, number 8.
+
+    f: function, single variable.
+    l: lower limit
+    u: upper limit of integration
+    tol: tolerance, realtive error, default to 1 in 1000
+
     To apply the quadrature procedure, first the problem is transformed on interval to:
 
     u              1                        given:
@@ -44,8 +53,6 @@ def intg(f, l, u, tol=1e-3):
     tolerance before submitting the result as a good enough estimate for the integral.
     """
 
-    tol = abs(tol)  # ensure a positive tolerance
-
     a = (u - l) / 2
     b = (u + l) / 2
 
@@ -65,7 +72,7 @@ def intg(f, l, u, tol=1e-3):
         I = I * 0.5 + dI
         k += 1
 
-        if d < tol:
+        if d < abs(I * tol):  # convert the relative deviance to abs.
             c += 1
         else:
             c = 0
