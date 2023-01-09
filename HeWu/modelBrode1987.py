@@ -14,7 +14,7 @@ Specifically, the below came from SECTION 4.
 from math import log10, exp
 from uc import _uc_m2ft, _uc_psi2pa, _uc_ft2m
 
-from HeWu.util import intg
+from HeWu.intg import intg
 
 
 def _DeltaP_s(GR, H, W):
@@ -712,9 +712,31 @@ def _I_p_pos(GR, H, W, DeltaP_s=None, Xm=None):
 
 def airburst(GR_m, H_m, W, t=None, prettyPrint=True):
     """
-    GR: ground range, meter
-    H: height of burst, meter
-    W: yield, kiloton
+    Calculate various air-burst parameters, using the Brode 1987 model and adapting
+    to SI unit system.
+
+    input:
+        GR: ground range, meter
+        H : height of burst, meter
+        W : yield, kiloton
+        t : partial time, second, default to None
+        prettyPrint: boolean, whether to produce a pretty print output using print()
+
+    output:
+        TAAIR  : time of arrival, second
+        PAAIR  : maximum overpressure, Pa
+        DPP    : overpressure positive phase duration, second
+        IPTOTAL: overpressure total positive impulse, Pa-s
+        IPEST  : estimation of the above, Pa-s
+        PPART  : overpressure calculated at partial time, Pa
+        IPPART : overpressure impulse integrated to partial time, Pa-s
+        QAAIR  : maximum dynamic pressure horizontal component, Pa
+        DPQ    : dynamic pressure positive (outward flow) phase duration, s
+        IQTOTAL: dynamic pressure horizontal component total impulse, Pa-s
+        IQEST  : estimation of the above, Pa-s
+        QPART  : dynamic pressure horizontal component at partial time, Pa
+        IQPART : dynamic pressure horizontal impulse integrated to partial time, Pa-s
+        XM     : "onset of Mach reflection locus", range at which Mach reflection starts, m
 
     """
     GR = _uc_m2ft(GR_m)
@@ -756,20 +778,31 @@ def airburst(GR_m, H_m, W, t=None, prettyPrint=True):
     PAAIR = _uc_psi2pa(DeltaP_s)
     QAAIR = _uc_psi2pa(Q_s)
 
+    if t is None:
+        PPART, IPPART, QPART, IQPART = None, None, None, None
+    else:
+        try:
+            PPART, IPPART = _DeltaP(GR, H, W, t * 1000, integrate=True)
+        except ValueError:
+            PPART, IPPART = None, None
+        try:
+            QPART, IQPART = _Q(GR, H, W, t * 1000, integrate=True)
+        except ValueError:
+            QPART, IQPART = None, None
+
     if prettyPrint:
         print("{:^49}".format("INPUT"))
         print("Ground Range:\n{:.>20,.6g} m".format(GR_m))
         print("Burst Height:\n{:.>20,.6g} m".format(H_m))
         print("Yield:\n{:.>20,.6g} kT".format(W))
-
-        if t is None:
-            pass
-        else:
-            print("Time To:\n{:.>20,.6g} s".format(t))
-
+        print("")
+        print(
+            "Time To:\n{:.>20} s".format("######" if t is None else "{:,.6g}".format(t))
+        )
         print("")
         print("{:^49}".format("OUTPUT"))
         print("Time of Arrival:\n{:.>20,.6g} s".format(TAAIR))
+        print("Range Onset of Mach Stem:\n{:.>20,.6g} m".format(XM))
         print("")
         print("{:>24}{:>24} ".format("Overpressure", "Dyn.Pres.Hz.Comp."))
         print("{:<24}{:<24} ".format("Peak:", ""))
@@ -778,46 +811,47 @@ def airburst(GR_m, H_m, W, t=None, prettyPrint=True):
         print("{:.>22,.6g} s{:.>22,.6g} s ".format(DPP, DPQ))
         print("{:<24}{:<24} ".format("Impulse:", ""))
         print(".integral.{:.>9,.6g} Pa-s{:.>19,.6g} Pa-s".format(IPTOTAL, IQTOTAL))
-        if IQEST is None:
-            print(".estimate.{:.>9,.6g} Pa-s{:.>19} Pa-s".format(IPEST, "~~~~~~"))
-        else:
-            print(".estimate.{:.>9,.6g} Pa-s{:.>19,.6g} Pa-s".format(IPEST, IQEST))
-
-        if t is None:
-            pass
-        else:
-            print("")
-            try:
-                PPART, IPPART = _DeltaP(GR, H, W, t * 1000, integrate=True)
-            except ValueError:
-                PPART, IPPART = None, None
-            try:
-                QPART, IQPART = _Q(GR, H, W, t * 1000, integrate=True)
-            except ValueError:
-                QPART, IQPART = None, None
-
-            if (PPART is None) and (QPART is not None):
-                print("{:<24}{:<24} ".format("Pressure at Time:", ""))
-                print("{:.>21} Pa{:.>21,.6g} Pa ".format("~~~~~~", QPART))
-                print("{:<24}{:<24} ".format("Partial Impulse to Time:", ""))
-                print(".integral.{:.>9} Pa-s{:.>19,.6g} Pa-s".format("~~~~~~", IQPART))
-
-            elif (QPART is None) and (PPART is not None):
-                print("{:<24}{:<24} ".format("Pressure at Time:", ""))
-                print("{:.>21,.6g} Pa{:.>21} Pa ".format(PPART, "~~~~~~"))
-                print("{:<24}{:<24} ".format("Partial Impulse to Time:", ""))
-                print(".integral.{:.>9,.6g} Pa-s{:.>19} Pa-s".format(IPPART, "~~~~~~"))
-
-            else:
-                print("{:<24}{:<24} ".format("Pressure at Time:", ""))
-                print("{:.>21,.6g} Pa{:.>21,.6g} Pa ".format(PPART, QPART))
-                print("{:<24}{:<24} ".format("Partial Impulse to Time:", ""))
-                print(
-                    ".integral.{:.>9,.6g} Pa-s{:.>19,.6g} Pa-s".format(IPPART, IQPART)
-                )
+        print(
+            ".estimate.{:.>9,.6g} Pa-s{:.>19} Pa-s".format(
+                IPEST, "######" if IQEST is None else "{:,.6g}".format(IQEST)
+            )
+        )
 
         print("")
 
+        print("{:<24}{:<24} ".format("Pressure at Time:", ""))
+        print(
+            "{:.>21} Pa{:.>21} Pa ".format(
+                "######" if PPART is None else "{:,.6g}".format(PPART),
+                "######" if QPART is None else "{:,.6g}".format(QPART),
+            )
+        )
+        print("{:<24}{:<24} ".format("Partial Impulse to Time:", ""))
+        print(
+            ".integral.{:.>9} Pa-s{:.>19} Pa-s ".format(
+                "######" if IPPART is None else "{:,.6g}".format(IPPART),
+                "######" if IQPART is None else "{:,.6g}".format(IQPART),
+            )
+        )
+        print("")
+
+    return (
+        TAAIR,
+        PAAIR,
+        DPP,
+        IPTOTAL,
+        IPEST,
+        PPART,
+        IPPART,
+        QAAIR,
+        DPQ,
+        IQTOTAL,
+        IQEST,
+        QPART,
+        IQPART,
+        XM,
+    )
+
 
 if __name__ == "__main__":
-    airburst(1, 4, 8, 0.7)
+    airburst(1000, 1, 1, 2.9)

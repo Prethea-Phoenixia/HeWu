@@ -23,6 +23,8 @@ y  y=RM/x=RF
 
 from HeWu.uc import _uc_m2kft, _uc_psi2pa
 
+from HeWu.intg import intg
+
 """minimum value the scaled ground range and burst height are clamped to, 
 in order to simulate a "zero" in kft/kT^(1/3)"""
 minimum = 1e-3
@@ -297,12 +299,7 @@ def _I(gr_0, hob, W):
     r_0 = (gr_0**2 + hob**2) ** 0.5
     D_up = _D_up(gr_0, hob, W)
 
-    IQ = 0
-    N = 35
-    dt = D_up / N
-
-    for i in range(N):
-        t = dt * (i + 0.5) + t_0
+    def Q(t):
         gr = _inv_t_a(t, gr_0, gr_0 * 2 + minimum, hob, W)
         r = (gr**2 + hob**2) ** 0.5
         n = (
@@ -311,11 +308,9 @@ def _I(gr_0, hob, W):
             + (14.37 + 6.291 * r / m) / (1 + 28.41 * (r / m) ** 3)
         )
 
-        Q = _Q_H(gr / m, hob / m) * (r_0 / r) ** n * (1 - ((t - t_0) / D_up) ** 2)
+        return _Q_H(gr / m, hob / m) * (r_0 / r) ** n * (1 - ((t - t_0) / D_up) ** 2)
 
-        IQ += Q * dt
-
-    return IQ
+    return intg(Q, t_0, t_0 + D_up)[0]
 
 
 def airburst(GR, HOB, W, prettyPrint=True):
