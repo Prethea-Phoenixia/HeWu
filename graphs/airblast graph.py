@@ -34,12 +34,12 @@ lowYs = floor(ymed / delta)
 
 # 10 kpa: 1650, 1500
 x = np.append(
-    np.arange(delta / 1e3, xmed / 1e3, delta / 1e3),
+    np.arange(0, xmed / 1e3, delta / 1e3),
     np.arange(xmed / 1e3, (xmax + delta) / 1e3, 5 * delta / 1e3),
 )
 
 y = np.append(
-    np.arange(delta / 1e3, ymed / 1e3, delta / 1e3),
+    np.arange(0, ymed / 1e3, delta / 1e3),
     np.arange(ymed / 1e3, (ymax + delta) / 1e3, 5 * delta / 1e3),
 )
 
@@ -65,7 +65,9 @@ for gr in x:
             groundRange += 0.01
             height += 0.01
 
-        p, q, t, ip, dpp, t1, XM, _, t2, iq, dpq, t3 = airburst(Y, height, groundRange)
+        p, q, t, ip, dpp, t1, XM, _, t2, iq, dpq, t3 = airburst(
+            groundRange, height, Y, False
+        )
 
         LM = max(80 * Y3, 1.3 * XM)
         P[j][i] = p / 1e6
@@ -269,7 +271,7 @@ def onclick(event):
         i += 1
 
     def t(y, x):
-        _, _, t, _, _, _, _, _, _, _, _, _ = airburst(Y, y, x)
+        _, _, t, _, _, _, _, _, _, _, _, _ = airburst(x, y, Y, False)
         return t
 
     cst2 = ax2.contour(

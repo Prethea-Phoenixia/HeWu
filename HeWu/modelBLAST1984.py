@@ -118,11 +118,9 @@ def airburst(GR, HOB, Y, prettyPrint=True):
     IPTOTAL: overpressure impulse, pa-s
     DPP: over pressure positive phase duration, s
     limit1: whether model limit is exceeded for PAIR to DPP
-
     XM: mach stem formation range, m
     HTP: height of triple point, m
     limit2: whether XM and HTP estimates are within model limit
-
     IQTOTAL: total dynamic pressure impulse, pa-s
     DPQ: dynamic pressure positive phase duration, s
     limit3: whether the IQTOTAL and DPQ estimations are within limit.

@@ -45,6 +45,17 @@ def _DeltaP_s(GR, H, W):
         - 0.03831 * z**17 / (1 + 0.02415 * z**17)
         + 0.6692 / (1 + 4164 * z**8)
     )
+
+    # from FORTRAN, BB
+    bb = (
+        0.0629
+        * ((x / y) ** 8.34)
+        / (1 + 0.00509 * ((x / y) ** 13.05))
+        * 0.05
+        * y
+        / (1 + 2.56e-8 * (y**5))
+    )
+
     c = 4.153 - 1.149 * z**18 / (1 + 1.641 * z**18) - 1.1 / (1 + 2.771 * z**2.5)
     d = -4.166 + 25.76 * z**1.75 / (1 + 1.382 * z**18) + 8.257 * z / (1 + 3.219 * z)
     e = 1 - 0.004642 * z**18 / (1 + 0.003886 * z**18)
@@ -55,7 +66,9 @@ def _DeltaP_s(GR, H, W):
     )
     g = 1.83 + 5.361 * z**2 / (1 + 0.3139 * z**6)
 
-    h = (
+    # In-text version
+    """
+    h1 = (
         8.808 * z**1.5 / (1 + 154.5 * z**3.5)
         - (0.2905 + 64.67 * z**5) / (1 + 441.5 * z**5)
         - 1.389 * z / (1 + 49.03 * z**5)
@@ -63,17 +76,41 @@ def _DeltaP_s(GR, H, W):
         * r**2
         / ((781.2 - 123.4 * r + 37.98 * r**1.5 + r**2) * (1 + 2 * y))
     )
+    """
+    # FORTRAN version (appendix B)
 
-    j = 0.000629 * y**4 / (3.493e-9 + y**4) - 2.67 * y**2 / (1 + 1e7 * y**4.3)
-    k = 5.18 + 0.2803 * y**3.5 / (3.788e-6 + y * 4)
+    h = (
+        +8.808 * (z**1.5) / (1 + 154.5 * (z**3.5))
+        - (0.2905 + 64.67 * (z**5)) / (1 + 441.5 * (z**5))
+        - 1.389 * z / (1 + 49.03 * (z**5))
+        + 1.094
+        * (r**2)
+        / ((0.7813e9 - 1.234e5 * r + 1201 * (r**1.5) + (r**2)) * (1 + 2 * y))
+    )  # yeah this error is pretty egregious
 
-    DeltaP_s = 10.47 / r**a + b / r**c + d * e / (1 + f * r**g) + h + j / r**k
+    # j = 0.000629 * y**4 / (3.493e-9 + y**4) - 2.67 * y**2 / (1 + 1e7 * y**4.3)
+    # k = 5.18 + 0.2803 * y**3.5 / (3.788e-6 + y * 4)
+
+    # from FORTRAN P, Q corresponds to j, k here.
+    p = 1.8008e-7 * (y**4) / (1 + 0.0002863 * (y**4)) - 2.121 * y**2 / (
+        794300 + (y**4.3)
+    )
+    q = 5.18 + 8.864 * (y**3.5) / (3.788e6 + (y**4))
+
+    DeltaP_s = (
+        10.47 / r**a + (b - bb) / r**c + d * e / (1 + f * r**g) + h + p / r**q
+    )
+
+    # DeltaP_s1 = 10.47 / r**a + b / r**c + d * e / (1 + f * r**g) + h1 + j / r**k
+
+    # print(DeltaP_s - DeltaP_s1)
 
     return DeltaP_s
 
 
+"""
 def _T(GR, H, W):
-    """
+    
     close-in time of arrival versus shock radius, in millisecond, eq.41
     intended as a helper function
 
@@ -86,8 +123,6 @@ def _T(GR, H, W):
     H: height in ft
     W: yield in kt
 
-    """
-
     m = W ** (1 / 3)
     r = (GR**2 + H**2) ** 0.5 / m / 1000
 
@@ -96,6 +131,7 @@ def _T(GR, H, W):
     c = (1.028 + 2.087 * r + 2.69 * r**2) * r**8
 
     return m * a / (b + c)
+"""
 
 
 def _Xm(GR, H, W):
@@ -132,6 +168,9 @@ def _tau(GR, H, W, Xm=None):
     if Xm is None:
         Xm = _Xm(GR, H, W)
 
+    R = (X**2 + Y**2) ** 0.5 / 1000
+
+    """
     if X <= Xm:  # free-air burst toa
         # tau = _u(r) # _u equivalent to _T
         # tau = _T(GR, H, 1)
@@ -140,6 +179,35 @@ def _tau(GR, H, W, Xm=None):
         # tau = _u(rm) + _w(r) - _w(rm) # _w equivalent to _T with 2 kT
         # tau = _T(Xm * m, H, 1) + _T(GR, H, 2) - _T(Xm * m, H, 2)
         tau = (_T(Xm * m, H, W) + _T(GR, H, 2 * W) - _T(Xm * m, H, 2 * W)) / m
+    """
+
+    U = (
+        (0.543 - 21.8 * R + 386 * (R**2) + 2383 * (R**3))
+        * (R**8)
+        / (
+            2.99e-14
+            - 1.91e-10 * (R**2)
+            + 1.032e-6 * (R**4)
+            - 4.43e-6 * (R**6)
+            + (1.028 + 2.087 * R + 2.69 * (R**2)) * (R**8)
+        )
+    )
+
+    if X > Xm:
+        W = (
+            (1.086 - 34.605 * R + 486.3 * (R**2) + 2383 * (R**3))
+            * (R**8)
+            / (
+                3.0137e-13
+                - 1.2128e-9 * (R**2)
+                + 4.128e-6 * (R**4)
+                - 1.116e-5 * (R**6)
+                + (1.632 + 2.629 * R + 2.69 * (R**2)) * (R**8)
+            )
+        )
+        tau = U * Xm / X + W * (1 - Xm / X)
+    else:
+        tau = U
 
     return tau
 
@@ -167,7 +235,7 @@ def _D(GR, H, W, tau=None):
         - 15.18 * (Y / 100) ** 3.5 / (1 + 15.18 * (Y / 100) ** 3.5)
         - 0.02441
         * (Y / 1e6) ** 2
-        / (1 + 9000 * (Y / 100) ** 7)
+        / (1 + 9e3 * (Y / 100) ** 7)
         * 1e10
         / (0.441 + (X / 100) ** 10)
     )
@@ -275,7 +343,7 @@ def _DeltaP(GR, H, W, t, integrate=True):
     X = GR / m  # ft/kT^(1/3)
     Y = H / m  # ft/kT^(1/3)
 
-    z = H / GR
+    z = min(H / GR, 100)  # see FORTRAN
 
     Xm = _Xm(GR, H, W)  # onset of Mach reflection locus, scaled, in ft per kT**(1/3)
 
@@ -300,7 +368,7 @@ def _DeltaP(GR, H, W, t, integrate=True):
 
     """
 
-    K = abs((X - Xm) / (Xe - Xm))
+    K = min(abs((X - Xm) / (Xe - Xm)), 50)  # this is seen in the FORTRAN listing
 
     d2 = 2.99 + 31240 * (Y / 100) ** 9.86 / (1 + 15530 * (Y / 100) ** 9.87)
     d = (
@@ -335,7 +403,7 @@ def _DeltaP(GR, H, W, t, integrate=True):
             + 7.571 * z**7.15 / (1 + 5.135 * z**12.9)
             - 8.07 * z**7.31 / (1 + 5.583 * z**12.23)
         )
-        * 0.4530
+        * 0.435  # 0.4530 in paper, 0.435 in FORTAN
         * (Y / 10) ** 1.26
         / (1 + 0.03096 * (Y / 10) ** 3.12)
         * (1 - 0.000019 * tau**8 / (1 + 0.000019 * tau**8))
@@ -356,8 +424,8 @@ def _DeltaP(GR, H, W, t, integrate=True):
     )
 
     g = (
-        10 + (77.58 - 64.99 * tau**0.125 / (1 + 0.04348 * tau**0.5)) * s
-    )  # early time decay power
+        10 + (77.58 - 64.99 * tau**0.125 / (1 + 0.04348 * tau**5)) * s
+    )  # early time decay power, tau raised to 0.5 in work, 5 in FORTRAN
 
     h = (
         3.003
@@ -399,29 +467,29 @@ def _DeltaP(GR, H, W, t, integrate=True):
         returns the ratio: DeltaP @ scaled time sigma / DeltaP_s
         """
 
-        j = min(
-            11860 * (sigma - tau) / (Y * abs(X - Xm) ** 1.25), 200
-        )  # ratio of time after TOA to time to second peak after TOA,
-        # this absolute operation around X-Xm is inferred.
-
-        v = v0 * j**3 / (6.13 + j**3) + 1
-
-        c = (
-            (
-                (1.04 - 0.02409 * (X / 100) ** 4 / (1 + 0.02317 * (X / 100) ** 4))
-                * j**7
-                / ((1 + a) * (1 + 0.923 * j**8.5))
-            )
-            * (c2 + (1 - c2) * (1 - 0.09 * K**2.5 / (1 + 0.09 * K**2.5)))
-            * c3
-            * (1 - ((sigma - tau) / D) ** 8)
-        )  # this is harder to split into time and non-time dependent part and left as is
-
         b = (f * (tau / sigma) ** g + (1 - f) * (tau / sigma) ** h) * (
             1 - (sigma - tau) / D
         )
 
         if X >= Xm and Y <= 380:
+            j = min(
+                11860 * (sigma - tau) / (Y * (X - Xm) ** 1.25), 200
+            )  # ratio of time after TOA to time to second peak after TOA,
+            # this absolute operation around X-Xm is inferred.
+
+            v = v0 * j**3 / (6.13 + j**3) + 1
+
+            c = (
+                (
+                    (1.04 - 0.02409 * (X / 100) ** 4 / (1 + 0.02317 * (X / 100) ** 4))
+                    * j**7
+                    / ((1 + a) * (1 + 0.923 * j**8.5))
+                )
+                * (c2 + (1 - c2) * (1 - 0.09 * K**2.5 / (1 + 0.09 * K**2.5)))
+                * c3
+                * (1 - ((sigma - tau) / D) ** 8)
+            )  # this is harder to split into time and non-time dependent part and left as is
+
             return (1 + a) * (b * v + c)
         else:
             return b
@@ -503,7 +571,7 @@ def _Q(GR, H, W, t, integrate=True):
     X = GR / m  # ft/kT^(1/3)
     Y = H / m  # ft/kT^(1/3)
 
-    z = H / GR
+    z = min(H / GR, 100)  # see FORTRAN
 
     Xm = _Xm(GR, H, W)  # onset of Mach reflection locus, scaled, in ft per kT**(1/3)
 
@@ -511,7 +579,7 @@ def _Q(GR, H, W, t, integrate=True):
         3.039 * Y / (1 + 0.0067 * Y)
     )  # locus of points where second peak equals first peak, scaled in ft per kT**(1/3)
 
-    K = abs((X - Xm) / (Xe - Xm))
+    K = min(abs((X - Xm) / (Xe - Xm)), 50)  # this is seen in the FORTRAN listing
 
     d2 = 2.99 + 31240 * (Y / 100) ** 9.86 / (1 + 15530 * (Y / 100) ** 9.87)
     d = (
@@ -546,7 +614,7 @@ def _Q(GR, H, W, t, integrate=True):
             + 7.571 * z**7.15 / (1 + 5.135 * z**12.9)
             - 8.07 * z**7.31 / (1 + 5.583 * z**12.23)
         )
-        * 0.4530
+        * 0.435  # 0.4530 in paper, 0.435 in FORTAN
         * (Y / 10) ** 1.26
         / (1 + 0.03096 * (Y / 10) ** 3.12)
         * (1 - 0.000019 * tau**8 / (1 + 0.000019 * tau**8))
@@ -567,7 +635,7 @@ def _Q(GR, H, W, t, integrate=True):
     )
 
     g = (
-        10 + (77.58 - 64.99 * tau**0.125 / (1 + 0.04348 * tau**0.5)) * s
+        10 + (77.58 - 64.99 * tau**0.125 / (1 + 0.04348 * tau**5)) * s
     )  # early time decay power
 
     h = (
@@ -618,29 +686,29 @@ def _Q(GR, H, W, t, integrate=True):
         returns the ratio: Q, dynamic pressure hz.component in psi
         """
 
-        j = min(
-            11860 * (sigma - tau) / (Y * abs(X - Xm) ** 1.25), 200
-        )  # ratio of time after TOA to time to second peak after TOA,
-        # this absolute operation around X-Xm is inferred.
-
-        v = v0 * j**3 / (6.13 + j**3) + 1
-
-        c = (
-            (
-                (1.04 - 0.02409 * (X / 100) ** 4 / (1 + 0.02317 * (X / 100) ** 4))
-                * j**7
-                / ((1 + a) * (1 + 0.923 * j**8.5))
-            )
-            * (c2 + (1 - c2) * (1 - 0.09 * K**2.5 / (1 + 0.09 * K**2.5)))
-            * c3
-            * (1 - ((sigma - tau) / D_u) ** 8)
-        )  # this is harder to split into time and non-time dependent part and left as is
-
         b = (f * (tau / sigma) ** g + (1 - f) * (tau / sigma) ** h) * (
             1 - (sigma - tau) / D_u
         )
 
         if X >= Xm and Y <= 380:
+            j = min(
+                11860 * (sigma - tau) / (Y * (X - Xm) ** 1.25), 200
+            )  # ratio of time after TOA to time to second peak after TOA,
+            # this absolute operation around X-Xm is inferred.
+
+            v = v0 * j**3 / (6.13 + j**3) + 1
+
+            c = (
+                (
+                    (1.04 - 0.02409 * (X / 100) ** 4 / (1 + 0.02317 * (X / 100) ** 4))
+                    * j**7
+                    / ((1 + a) * (1 + 0.923 * j**8.5))
+                )
+                * (c2 + (1 - c2) * (1 - 0.09 * K**2.5 / (1 + 0.09 * K**2.5)))
+                * c3
+                * (1 - ((sigma - tau) / D_u) ** 8)
+            )  # this is harder to split into time and non-time dependent part and left as is
+
             ratio = (1 + a) * (b * v + c)
         else:
             ratio = b
@@ -740,7 +808,7 @@ def _Q_s(GR, H, W):
         )
 
 
-def _I_u_pos(GR, H, W):
+def _I_u_pos(GR, H, W, DeltaP_s=None):
     """
     simple fit for integral of dynamic pressure, psi-ms, with time over the
     positive (outward flow) phase. This is only valid in the Mach reflection
@@ -764,7 +832,34 @@ def _I_u_pos(GR, H, W):
     if x > 170 * psi / (1 + 337 * psi**0.25) + 0.914 * psi**2.5:  # x> Xi
         return (E * x / (F + x**3.61) + G / (1 + 0.22 * x**2)) * m
     else:
-        return None  # not applicable!
+        """
+        free air-burst estimation, within 10% for 3 psi < Delta P_s < 10,000 psi
+        high by ~20% at DeltaP_s = 100,000 psi
+
+        if DeltaP_s is None:
+            DeltaP_s = _DeltaP_s(GR, H, W)
+
+        return (
+            2.14 * DeltaP_s**1.637 * m / (1 + 0.00434 * DeltaP_s**1.431)
+        )  # psi-ms, eq. 54)
+
+
+        """
+
+        r = (x**2 + y**2) ** 0.5
+
+        """A fit to the dynamic impulse versus range for the early calculations
+         [Brode, 1959b] agrees to better than 10 percent for 0.0025 - 2kft/kT^(1/3)"""
+
+        return (
+            18.8 * r**2 / (1e-6 + 0.06896 * r**3 + 0.5963 * r**5.652)
+            + 92.64 / (100 * r) ** 5
+            + 2935
+            * (r - 0.00597)
+            * (0.01 - r)
+            * (0.0003552 - r**4)
+            / (1e-10 + 0.003377 * r**2.5 + 155.8 * r**8)
+        ) * m
 
 
 def _I_p_pos(GR, H, W, DeltaP_s=None, Xm=None):
@@ -797,6 +892,11 @@ def airburst(GR_m, H_m, W, t=None, prettyPrint=True):
     Calculate various air-burst parameters, using the Brode 1987 model and adapting
     to SI unit system.
 
+    The total integral for overpressure and dynamic pressure horizontal component
+    are provided for illustrative purpose only. In terms of total impulse they are
+    less accurate than using the estimates. However, the estimations behave poorly
+    outside of their indicated range, and especially poorly at high pressures.
+
     input:
         GR: ground range, meter
         H : height of burst, meter
@@ -821,10 +921,11 @@ def airburst(GR_m, H_m, W, t=None, prettyPrint=True):
         XM     : "onset of Mach reflection locus", range at which Mach reflection starts, m
 
     """
-    GR = _uc_m2ft(max(GR_m, 1e-3))  # clamp the value to > 0.001 meter
-    H = _uc_m2ft(max(H_m, 1e-3))  # clamp the value to > 0.001 meter
 
     m = W ** (1 / 3)
+
+    GR = max(_uc_m2ft(GR_m), 1e-9 * m)  # clamp the value to > 0.001 meter
+    H = max(_uc_m2ft(H_m), 1e-9 * m)  # clamp the value to > 0.001 meter
 
     Xm = _Xm(GR, H, W)
     tau = _tau(GR, H, W, Xm)
@@ -841,16 +942,17 @@ def airburst(GR_m, H_m, W, t=None, prettyPrint=True):
     DPP = D / 1000  # ms to s
     DPQ = D_u / 1000  # ms to s
 
-    _, I_p_pos = _DeltaP(GR, H, W, (tau * m + D), integrate=True)
-    _, I_u_pos = _Q(GR, H, W, (tau * m + D_u), integrate=True)
+    p, I_p_pos = _DeltaP(GR, H, W, (tau * m + D), integrate=True)
+    q, I_u_pos = _Q(GR, H, W, (tau * m + D_u), integrate=True)
+
+    # print("")
+    # print("{:^10.2%},{:^10.2%}".format(p / DeltaP_s, q / Q_s))
+    # check if at the time of integration period, the pressures are close to 0
 
     I_p_est = _I_p_pos(GR, H, W, DeltaP_s, Xm)
-    I_u_est = _I_u_pos(GR, H, W)
+    I_u_est = _I_u_pos(GR, H, W, DeltaP_s)
 
-    if I_u_est is None:
-        IQEST = None
-    else:
-        IQEST = _uc_psi2pa(I_u_est / 1000)
+    IQEST = _uc_psi2pa(I_u_est / 1000)
 
     IPEST = _uc_psi2pa(I_p_est / 1000)
 
@@ -945,7 +1047,10 @@ if __name__ == "__main__":
     """
     by default, runs a test
     """
+
     from HeWu.test import runtest
+
+    airburst(29.75, 7.62, 1, 124e-3)
 
     def _airburst_to_op(gr, h, Y, t):
         _, _, _, _, _, p, _, _, _, _, _, _, _, _ = airburst(gr, h, Y, t, False)

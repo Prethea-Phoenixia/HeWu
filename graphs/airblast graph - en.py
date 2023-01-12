@@ -16,7 +16,7 @@ xmax = 3400 * Y3
 ymax = 3400 * Y3
 xmed = 1200 * Y3
 ymed = 1200 * Y3
-delta = 10 * Y3
+delta = 5 * Y3
 
 intervals = (100, 200, 250, 500, 1000, 2000, 2500, 5000, 10000)
 
@@ -31,12 +31,12 @@ lowXs = floor(xmed / delta)
 lowYs = floor(ymed / delta)
 
 x = np.append(
-    np.arange(0, xmed / 1e3, delta / 1e3),
+    np.arange(delta / 1e3, xmed / 1e3, delta / 1e3),
     np.arange(xmed / 1e3, (xmax + delta) / 1e3, 5 * delta / 1e3),
 )  # in kilometer
 
 y = np.append(
-    np.arange(0, ymed / 1e3, delta / 1e3),
+    np.arange(delta / 1e3, ymed / 1e3, delta / 1e3),
     np.arange(ymed / 1e3, (ymax + delta) / 1e3, 5 * delta / 1e3),
 )  # in kilometer
 
@@ -58,17 +58,22 @@ for gr in x:
         height = h * 1e3
 
         t, p, dpp, ipi, ipe, _, _, q, dpq, iqi, iqe, _, _, _ = airburst(
-            groundRange, height, Y
+            groundRange, height, Y, None, False
         )
 
         P[j][i] = p / 1e6
         Q[j][i] = q / 1e6
 
         T[j][i] = t
+        if ipi < 1:
+            ipi = 1
 
-        IP[j][i] = ip
+        if iqi < 1:
+            iqi = 1
+
+        IP[j][i] = ipi
         DPP[j][i] = dpp
-        IQ[j][i] = iq
+        IQ[j][i] = iqi
         DPQ[j][i] = dpq
 
         j += 1
@@ -252,7 +257,7 @@ def onclick(event):
         i += 1
 
     def t(y, x):
-        _, _, t, _, _, _, _, _, _, _, _, _ = airburst(Y, y, x)
+        t, _, _, _, _, _, _, _, _, _, _, _, _, _ = airburst(x, y, Y, None, False)
         return t
 
     cst2 = ax2.contour(
@@ -346,6 +351,7 @@ def onclick(event):
 
     ipmin = np.nanmin(ip)
     ipmax = np.nanmax(ip)
+
     csd3 = ax3.contourf(
         x,
         y,
@@ -353,7 +359,8 @@ def onclick(event):
         alpha=0.75,
         cmap=cmap,
         locator=ticker.LogLocator(),
-        levels=np.logspace(log10(ipmin), log10(ipmax), 10),
+        levels=np.logspace(log10(ipmin), log10(ipmax), 8),
+        # levels=np.linspace(ipmin, ipmax, 10),
     )
 
     _, top = ax3.get_ylim()
@@ -375,7 +382,7 @@ def onclick(event):
         alpha=0.75,
         cmap=cmap,
         locator=ticker.LogLocator(),
-        levels=np.logspace(log10(ipmin), log10(ipmax), 10),
+        levels=np.logspace(log10(ipmin), log10(ipmax), 8),
     )
 
     _, top = ax6.get_ylim()

@@ -7,7 +7,7 @@ def intg(f, l, u, tol=1e-3):
     f: function, single variable.
     l: lower limit
     u: upper limit of integration
-    tol: tolerance, realtive error, default to 1 in 1000
+    tol: tolerance, see below
 
     To apply the quadrature procedure, first the problem is transformed on interval to:
 
@@ -56,6 +56,8 @@ def intg(f, l, u, tol=1e-3):
     a = (u - l) / 2
     b = (u + l) / 2
 
+    tol = abs(tol)  # ensure positive
+
     k = 1  # iteration counter
     I = 0  # integral counter
     c = 0  # trend counter, No. of iterations with reducing delta.
@@ -72,7 +74,7 @@ def intg(f, l, u, tol=1e-3):
         I = I * 0.5 + dI
         k += 1
 
-        if d < abs(I * tol):  # convert the relative deviance to abs.
+        if d < tol or d < tol * I:
             c += 1
         else:
             c = 0

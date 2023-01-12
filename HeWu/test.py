@@ -76,11 +76,11 @@ def runtest(airburst_to_op):
     print(
         "{:^10}|{:^10},{:^10},{:^10}|{:^10}-{:^10}:{:^10}".format(
             "kT",
-            "m",
-            "m",
-            "ms",
-            "kPa",
-            "kPa",
+            "m/kT^\u2153",
+            "m/kT^\u2153",  # this blood thing -> ⅓
+            "ms/kT^\u2153",
+            "Pa",
+            "Pa",
             "1",
         )
     )
@@ -90,20 +90,23 @@ def runtest(airburst_to_op):
         )
     )
     for testPoint in tests:
-        sgr, sbh, sigma_tau, op_psi = testPoint
+        sgr_ft, sbh_ft, sigma_tau, op_psi = testPoint
         op_pa = _uc_psi2pa(op_psi)
         Y = randint(1, 25000)  # 1kt to 10Mt
         Y3 = Y ** (1 / 3)
-        gr_ft = sgr * Y3
-        hob_ft = sbh * Y3
-        gr_m = _uc_ft2m(gr_ft)
-        hob_m = _uc_ft2m(hob_ft)
+
+        sgr_m = _uc_ft2m(sgr_ft)
+        sbh_m = _uc_ft2m(sbh_ft)
+
+        gr_m = sgr_m * Y3
+        hob_m = sbh_m * Y3
+
         time_elapsed = sigma_tau * Y3 / 1000  # ms -> s
 
         dp = airburst_to_op(gr_m, hob_m, Y, time_elapsed)
         delta = (dp - op_pa) / op_pa
         print(
             "{:^10d}|{:^10.3g},{:^10.3g},{:^10.3g}|{:^10.3g}-{:^10.3g}:{:^15.1%}".format(
-                Y, gr_m, hob_m, time_elapsed * 1000, op_pa, dp, delta
+                Y, sgr_m, sbh_m, sigma_tau, op_pa, dp, delta
             )
         )
