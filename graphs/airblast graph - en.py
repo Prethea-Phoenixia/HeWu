@@ -4,8 +4,7 @@ from math import floor
 import matplotlib as mpt
 from matplotlib import ticker
 import matplotlib.pyplot as plt
-from HeWu.modelBLAST1984 import airburst
-from HeWu.modelAWG1980 import _D_up, _I
+from HeWu.modelBrode1987 import airburst
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import matplotlib.patches as patches
 from math import sqrt, log, log10
@@ -58,34 +57,19 @@ for gr in x:
     for h in y:
         height = h * 1e3
 
-        if groundRange == 0 and height == 0:
-            groundRange += 0.01
-            height += 0.01
-
-        p, q, t, ip, dpp, t1, xm, htp, t2, iq, dpq, t3 = airburst(
-            Y, height, groundRange, False
+        t, p, dpp, ipi, ipe, _, _, q, dpq, iqi, iqe, _, _, _ = airburst(
+            groundRange, height, Y
         )
 
-        # LM = max(80 * Y3, 1.3 * xm)
         P[j][i] = p / 1e6
         Q[j][i] = q / 1e6
 
         T[j][i] = t
 
-        if t1:
-            IP[j][i] = ip
-            DPP[j][i] = dpp
-        else:
-            IP[j][i] = None
-            DPP[j][i] = None
-
-        """dirty hack"""
-        if groundRange > xm:
-            IQ[j][i] = iq
-            DPQ[j][i] = dpq
-        else:
-            IQ[j][i] = _I(groundRange / 304.8, height / 304.8, Y) * 6894.76 / 1e3
-            DPQ[j][i] = _D_up(groundRange / 304.8, height / 304.8, Y) / 1e3
+        IP[j][i] = ip
+        DPP[j][i] = dpp
+        IQ[j][i] = iq
+        DPQ[j][i] = dpq
 
         j += 1
 

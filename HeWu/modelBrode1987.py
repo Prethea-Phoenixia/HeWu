@@ -9,12 +9,16 @@ Harold L. Brode, July 1987
 Technical Report
 CONTRACT No. DNA 001-85-C-0089  
 
-Specifically, the below came from SECTION 4.
+This model is in general quite decent up to a pressure range of 100,000-200,000 psi
+
 """
 from math import log10, exp
-from uc import _uc_m2ft, _uc_psi2pa, _uc_ft2m
+from HeWu.uc import _uc_m2ft, _uc_psi2pa, _uc_ft2m
 
 from HeWu.intg import intg
+
+
+tol = 1e-5
 
 
 def _DeltaP_s(GR, H, W):
@@ -63,7 +67,9 @@ def _DeltaP_s(GR, H, W):
     j = 0.000629 * y**4 / (3.493e-9 + y**4) - 2.67 * y**2 / (1 + 1e7 * y**4.3)
     k = 5.18 + 0.2803 * y**3.5 / (3.788e-6 + y * 4)
 
-    return 10.47 / r**a + b / r**c + d * e / (1 + f * r**g) + h + j / r**k
+    DeltaP_s = 10.47 / r**a + b / r**c + d * e / (1 + f * r**g) + h + j / r**k
+
+    return DeltaP_s
 
 
 def _T(GR, H, W):
@@ -111,8 +117,7 @@ def _Xm(GR, H, W):
 
 def _tau(GR, H, W, Xm=None):
     """
-    scaled time of arrival for GR and H, in ms/kT^(1/3),
-    based on Eq. (41),
+    scaled time of arrival for GR and H, in ms/kT^(1/3), based on Eq. (41).
 
     GR: ground range in feet
     H: height of burst in feet
@@ -167,6 +172,9 @@ def _D(GR, H, W, tau=None):
         / (0.441 + (X / 100) ** 10)
     )
 
+    """ a very careful reading of the work suggest that the duration time must
+    also scale with yield, but the original formulation does not change. We fix
+    it by multiplying m onto D."""
     D = (
         (1640700 + 24629 * tau + 416.15 * tau**2)
         / (10880 + 619.76 * tau + tau**2)
@@ -180,14 +188,21 @@ def _D(GR, H, W, tau=None):
             )
             * s2
         )
-    )  # duration of positive phase in milliseconds,
+    ) * m  # duration of positive phase in milliseconds,
 
     return D
 
 
-def _D_u(GR, H, W, D=None):
+def _D_u(GR, H, W, D=None, Xm=None, DeltaP_s=None):
     """
-    positive phase duration for dynamic pressure in milliseconds
+    positive phase duration for dynamic pressure in milliseconds,
+    duration of outward blast wind
+
+    The below use the more complex form seen in Eqn.63). However, it is realized
+    that the below form can go below positive. Further, this behaviour is mostly
+    seen in case where H>GR, i.e. close to the situation of a free-air burst.
+
+    Therefore, we transition to a simpler fit in free air, Eqn.51)
 
     GR: ground range, feet
     H: height of burst, feet
@@ -198,17 +213,33 @@ def _D_u(GR, H, W, D=None):
     x = GR / m / 1000  # kft/kT^(1/3)
     y = H / m / 1000
 
-    if D is None:
-        D = _D(GR, H, W)
+    if Xm is None:
+        Xm = _Xm(GR, H, W)
 
-    C = (
-        89.6 * y**5.2 / (1 + 20.5 * y**5.4)
-        + 4.51 / (1 + 130.7 * y**8.6)
-        + 2.466 * y**0.5 / (1 + 99 * y**2.5)
-        - 12.8 * (x**2 + y**2) ** 1.25 / (1 + 3.63 * (x**2 + y**2) ** 1.25)
-    )
+    if x * 1000 < Xm:  # in free-air-burst
+        if DeltaP_s is None:
+            _pi = _DeltaP_s(GR, H, W) / 1000  # in ksi
+        else:
+            _pi = DeltaP_s / 1000
 
-    return C * D
+        D_u_pos = m * (
+            317 / (1 + 85 * _pi + 7500 * _pi**2)
+            + 6110 * _pi / (1 + 420 * _pi**2)
+            + 2113 * _pi / (1 + 11 * _pi)
+        )  # this correctly scales with yield.
+        return D_u_pos
+
+    else:  # in surface-burst
+        if D is None:
+            D = _D(GR, H, W)
+
+        C = (
+            89.6 * y**5.2 / (1 + 20.5 * y**5.4)
+            + 4.51 / (1 + 130.7 * y**8.6)
+            + 2.466 * y**0.5 / (1 + 99 * y**2.5)
+            - 12.8 * (x**2 + y**2) ** 1.25 / (1 + 3.63 * (x**2 + y**2) ** 1.25)
+        )
+        return C * D
 
 
 def _DeltaP(GR, H, W, t, integrate=True):
@@ -251,6 +282,23 @@ def _DeltaP(GR, H, W, t, integrate=True):
     Xe = (
         3.039 * Y / (1 + 0.0067 * Y)
     )  # locus of points where second peak equals first peak, scaled in ft per kT**(1/3)
+
+    """
+
+    y  x = Xm _____
+    |      __/  /
+    |    _/    / 
+    |r.r/    _/ x = Xe
+    |  /2>1_/ 
+    | / _/
+    |/_/   1>2
+    //--------------x
+
+    r.r.: regular reflection region
+    2>1 : Mach second peak > first peak
+    1>2 : Mach second peak < first peak
+
+    """
 
     K = abs((X - Xm) / (Xe - Xm))
 
@@ -382,10 +430,22 @@ def _DeltaP(GR, H, W, t, integrate=True):
 
     sigma = t / m  # sigma is the scaled time in ms/kT^(1/3)
 
-    if sigma < tau:
-        raise ValueError("blast wave hasn't arrived at the specified time")
-    if sigma > tau + D / m:
-        raise ValueError("positive phase for overpressure is over")
+    start = tau
+    end = tau + D / m
+
+    if start - sigma > tol:
+        raise ValueError(
+            "blast wave hasn't arrived at the specified time ( {} ms < {} ms )".format(
+                t, start * m
+            )
+        )
+    if sigma - end > tol:
+
+        raise ValueError(
+            "positive phase for over pressure is over ( {} ms > {} ms )".format(
+                t, end * m
+            )
+        )
 
     if integrate:
         """the integral DeltaP_s * intg(atSigma, tau, sigma)[0]
@@ -404,12 +464,24 @@ def _Q(GR, H, W, t, integrate=True):
     Overpressure or dynamic pressure horizontal component over time in psi.
     Optionally, integrates it from arrival time to specified time.
 
-        "The peak dynamic pressure and the dynamic impulse derived from this quick
-        fix fit are not as accurate as those given by (fitting) This fit falls
-        about 30 percent low on peak and impulse at the 100 psi overpressure range.
-        This quick fix time-history fit was provided as an analytic expression
-        useful in dynamic analyses in a limited (low) overpressure range, and should
-        not be used at high overpressures."
+        "The peak dynamic pressure and the dynamic impulse derived from this
+        quick fix fit are not as accurate as those given by Eqs. (64) and (65).
+        To illustrate the limited usefulness of this approximation [Eqs. (66) and (67)],
+        the peak dynamic pressures are compared with those from the KA
+        calculations in Figs. Ill and 112, all at the scaled burst height of 200 ft/KT^(1/3).
+        While the peaka from this time-history fit are appreciably low at the innermost
+        range plotted in Fig. Ill (24.5 psi versus 30 psi), the agreement gets better
+        at larger ranges (Fig. 112). The impulses, shown in Figs. 113 and 114, are
+        similarly poor at the closest range shown, but they are in good agreement far¬
+        ther out at intermediate ranges. This fit falls about 30 percent low on peak
+        and impulse at the 100 psi overpressure range. This quick fix time-history fit
+         was provided as an analytic expression useful in dynamic analyses in a limited
+        (low) overpressure range, and should not be used at high overpressures.
+        The expressions for peak dynamic pressure and dynamic impulse [Eqs. (64)
+        and (65)] are more accurate for peaks and total impulse, but they do not
+        provide the time- dependent or transient behavior necessary for calculations
+        of response of structures or vehicles. It is anticipated that this quick fix
+        time-history fit will be improved in the near future."
 
     input:
         GR: ground range in feet
@@ -587,11 +659,21 @@ def _Q(GR, H, W, t, integrate=True):
             )
 
     sigma = t / m  # sigma is the scaled time in ms/kT^(1/3)
+    start = tau
+    end = tau + D_u / m
 
-    if sigma < tau:
-        raise ValueError("blast wave hasn't arrived at the specified time")
-    if sigma > tau + D_u / m:
-        raise ValueError("positive phase for dynamic pressure is over")
+    if start - sigma > tol:
+        raise ValueError(
+            "blast wave hasn't arrived at the specified time ( {} ms < {} ms )".format(
+                t, start * m
+            )
+        )
+    if sigma - end > tol:
+        raise ValueError(
+            "positive phase for dynamic pressure is over ( {} ms > {} ms )".format(
+                t, end * m
+            )
+        )
 
     if integrate:
         """the integral intg(atSigma, tau, sigma)[0]
@@ -687,7 +769,7 @@ def _I_u_pos(GR, H, W):
 
 def _I_p_pos(GR, H, W, DeltaP_s=None, Xm=None):
     """
-    positive phase impulse in psi-ms
+    positive phase impulse in psi-ms, using a simple fit against overpressure peak
 
     GR: ground range, feet
     H: height of burst, feet
@@ -704,9 +786,9 @@ def _I_p_pos(GR, H, W, DeltaP_s=None, Xm=None):
     if Xm is None:
         Xm = _Xm(GR, H, W)
 
-    if X <= Xm:
+    if X <= Xm:  # airburst
         return 145 * DeltaP_s**0.5 / (1 + 0.00385 * DeltaP_s**0.5) * m
-    else:
+    else:  # surface burst
         return 183 * DeltaP_s**0.5 / (1 + 0.00385 * DeltaP_s**0.5) * m
 
 
@@ -719,7 +801,7 @@ def airburst(GR_m, H_m, W, t=None, prettyPrint=True):
         GR: ground range, meter
         H : height of burst, meter
         W : yield, kiloton
-        t : partial time, second, default to None
+        t : partial time after arrival, second, default to None
         prettyPrint: boolean, whether to produce a pretty print output using print()
 
     output:
@@ -739,25 +821,25 @@ def airburst(GR_m, H_m, W, t=None, prettyPrint=True):
         XM     : "onset of Mach reflection locus", range at which Mach reflection starts, m
 
     """
-    GR = _uc_m2ft(GR_m)
-    H = _uc_m2ft(H_m)
+    GR = _uc_m2ft(max(GR_m, 1e-3))  # clamp the value to > 0.001 meter
+    H = _uc_m2ft(max(H_m, 1e-3))  # clamp the value to > 0.001 meter
 
     m = W ** (1 / 3)
 
     Xm = _Xm(GR, H, W)
     tau = _tau(GR, H, W, Xm)
 
+    DeltaP_s = _DeltaP_s(GR, H, W)
+    Q_s = _Q_s(GR, H, W)
+
     D = _D(GR, H, W, tau)
-    D_u = _D_u(GR, H, W, D)
+    D_u = _D_u(GR, H, W, D, Xm, DeltaP_s)
 
     XM = _uc_ft2m(Xm * m)
     TAAIR = tau * m / 1000  # ms to s
 
     DPP = D / 1000  # ms to s
     DPQ = D_u / 1000  # ms to s
-
-    DeltaP_s = _DeltaP_s(GR, H, W)
-    Q_s = _Q_s(GR, H, W)
 
     _, I_p_pos = _DeltaP(GR, H, W, (tau * m + D), integrate=True)
     _, I_u_pos = _Q(GR, H, W, (tau * m + D_u), integrate=True)
@@ -782,11 +864,15 @@ def airburst(GR_m, H_m, W, t=None, prettyPrint=True):
         PPART, IPPART, QPART, IQPART = None, None, None, None
     else:
         try:
-            PPART, IPPART = _DeltaP(GR, H, W, t * 1000, integrate=True)
+            pt, ipt = _DeltaP(GR, H, W, tau * m + t * 1000, integrate=True)
+            PPART = _uc_psi2pa(pt)
+            IPPART = _uc_psi2pa(ipt / 1000)
         except ValueError:
             PPART, IPPART = None, None
         try:
-            QPART, IQPART = _Q(GR, H, W, t * 1000, integrate=True)
+            qt, iqt = _Q(GR, H, W, tau * m + t * 1000, integrate=True)
+            QPART = _uc_psi2pa(qt)
+            IQPART = _uc_psi2pa(iqt / 1000)
         except ValueError:
             QPART, IQPART = None, None
 
@@ -797,7 +883,9 @@ def airburst(GR_m, H_m, W, t=None, prettyPrint=True):
         print("Yield:\n{:.>20,.6g} kT".format(W))
         print("")
         print(
-            "Time To:\n{:.>20} s".format("######" if t is None else "{:,.6g}".format(t))
+            "Time To:\n{:.>20} s".format(
+                "######" if t is None else "{:,.6g}".format(t + TAAIR)
+            )
         )
         print("")
         print("{:^49}".format("OUTPUT"))
@@ -854,4 +942,13 @@ def airburst(GR_m, H_m, W, t=None, prettyPrint=True):
 
 
 if __name__ == "__main__":
-    airburst(1000, 1, 1, 2.9)
+    """
+    by default, runs a test
+    """
+    from HeWu.test import runtest
+
+    def _airburst_to_op(gr, h, Y, t):
+        _, _, _, _, _, p, _, _, _, _, _, _, _, _ = airburst(gr, h, Y, t, False)
+        return p
+
+    runtest(_airburst_to_op)

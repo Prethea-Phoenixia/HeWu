@@ -82,7 +82,16 @@ def _uc_m2kft(dist):
 def _uc_psi2pa(pres):
     """
     Converts presure from psi to pa
-    dist: distance in meter
+    pres: pressure in psi
+    """
+    conversion_const = 6894.76  # pa per psi
+    return pres * conversion_const
+
+
+def _uc_pa2psi(pres):
+    """
+    Converts presure from pa to psi
+    pres: pressure in pa
     """
     conversion_const = 6894.76  # pa per psi
     return pres * conversion_const

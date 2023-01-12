@@ -19,6 +19,7 @@ test cases, in the format of:
     sigma-tau: scaled time - (scaled) time of arrival, ms/kT^(1/3) 
     DeltaP: overpressure, psi.
 """
+
 tests = (
     (18.2, 0.0, 0.042, 107926.6),
     (28.1, 0.0, 0.363, 10113.7),
@@ -50,3 +51,59 @@ tests = (
     (1160.0, 2520.0, 0.538, 3.1185),
     (3140.0, 4260.0, 13.4, 1.233),
 )
+
+
+from HeWu.uc import _uc_ft2m, _uc_m2ft, _uc_psi2pa, _uc_pa2psi
+from random import randint
+
+
+def runtest(airburst_to_op):
+    """
+    given a (lambda?) function to return the overpressure at time for
+
+    """
+    print(
+        "{:^10}|{:^10},{:^10},{:^10}|{:^10}-{:^10}:{:^10}".format(
+            "Y",
+            "g.r.",
+            "h.o.b",
+            "sigma-tau",
+            "Δp (ref)",
+            "Δp (calc)",
+            "Δ",
+        )
+    )
+    print(
+        "{:^10}|{:^10},{:^10},{:^10}|{:^10}-{:^10}:{:^10}".format(
+            "kT",
+            "m",
+            "m",
+            "ms",
+            "kPa",
+            "kPa",
+            "1",
+        )
+    )
+    print(
+        "{:-^10}+{:-^10}-{:-^10}-{:-^10}+{:-^10}-{:-^10}-{:-^10}".format(
+            "", "", "", "", "", "", ""
+        )
+    )
+    for testPoint in tests:
+        sgr, sbh, sigma_tau, op_psi = testPoint
+        op_pa = _uc_psi2pa(op_psi)
+        Y = randint(1, 25000)  # 1kt to 10Mt
+        Y3 = Y ** (1 / 3)
+        gr_ft = sgr * Y3
+        hob_ft = sbh * Y3
+        gr_m = _uc_ft2m(gr_ft)
+        hob_m = _uc_ft2m(hob_ft)
+        time_elapsed = sigma_tau * Y3 / 1000  # ms -> s
+
+        dp = airburst_to_op(gr_m, hob_m, Y, time_elapsed)
+        delta = (dp - op_pa) / op_pa
+        print(
+            "{:^10d}|{:^10.3g},{:^10.3g},{:^10.3g}|{:^10.3g}-{:^10.3g}:{:^15.1%}".format(
+                Y, gr_m, hob_m, time_elapsed * 1000, op_pa, dp, delta
+            )
+        )
