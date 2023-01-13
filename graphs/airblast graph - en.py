@@ -16,7 +16,7 @@ xmax = 3400 * Y3
 ymax = 3400 * Y3
 xmed = 1200 * Y3
 ymed = 1200 * Y3
-delta = 5 * Y3
+delta = 10 * Y3
 
 intervals = (100, 200, 250, 500, 1000, 2000, 2500, 5000, 10000)
 
@@ -65,6 +65,7 @@ for gr in x:
         Q[j][i] = q / 1e6
 
         T[j][i] = t
+
         if ipi < 1:
             ipi = 1
 
