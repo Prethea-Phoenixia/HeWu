@@ -5,6 +5,13 @@ HeWu came from the pronunciation of 核武, lit. "nuclear armament", in Chinese.
 \
 Empirical models based on fitting to detailed calculations are preferred, and whenever possible, multiple sources are consulted and cross referenced with outstanding deviations noted.
 
+# Example Graphs
+![scaled overpressure](https://github.com/Prethea-Phoenixia/HeWu/blob/main/graphs/1kT_AB_OP.png)
+![scaled dynamic pressure](https://github.com/Prethea-Phoenixia/HeWu/blob/main/graphs/1kT_AB_DP.png)
+![scaled thermal](https://github.com/Prethea-Phoenixia/HeWu/blob/main/graphs/1kT_thermal.png)
+![scaled crater](https://github.com/Prethea-Phoenixia/HeWu/blob/main/graphs/1kT_crater.png)
+For generating these graphs, Numpy and Matplotlib are required.
+
 # Status
 under active development.
 
