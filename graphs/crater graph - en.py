@@ -20,10 +20,7 @@ delta = 0.5 * Y3
 ylevels = floor((ymax - ymin) // delta) + 1
 
 
-fig, axd = plt.subplot_mosaic(
-    [["upper left", "right"], ["lower left", "right"]],
-    layout="constrained",
-)
+fig, axd = plt.subplot_mosaic([["upper left", "right"], ["lower left", "right"]])
 # ax2 = ax1.twiny()
 ax1 = axd["right"]
 ax2 = axd["upper left"]
