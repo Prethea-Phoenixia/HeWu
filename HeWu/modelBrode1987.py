@@ -46,16 +46,6 @@ def _DeltaP_s(GR, H, W):
         + 0.6692 / (1 + 4164 * z**8)
     )
 
-    # from FORTRAN, BB
-    bb = (
-        0.0629
-        * ((x / y) ** 8.34)
-        / (1 + 0.00509 * ((x / y) ** 13.05))
-        * 0.05
-        * y
-        / (1 + 2.56e-8 * (y**5))
-    )
-
     c = 4.153 - 1.149 * z**18 / (1 + 1.641 * z**18) - 1.1 / (1 + 2.771 * z**2.5)
     d = -4.166 + 25.76 * z**1.75 / (1 + 1.382 * z**18) + 8.257 * z / (1 + 3.219 * z)
     e = 1 - 0.004642 * z**18 / (1 + 0.003886 * z**18)
@@ -67,8 +57,8 @@ def _DeltaP_s(GR, H, W):
     g = 1.83 + 5.361 * z**2 / (1 + 0.3139 * z**6)
 
     # In-text version
-    """
-    h1 = (
+
+    h = (
         8.808 * z**1.5 / (1 + 154.5 * z**3.5)
         - (0.2905 + 64.67 * z**5) / (1 + 441.5 * z**5)
         - 1.389 * z / (1 + 49.03 * z**5)
@@ -76,10 +66,26 @@ def _DeltaP_s(GR, H, W):
         * r**2
         / ((781.2 - 123.4 * r + 37.98 * r**1.5 + r**2) * (1 + 2 * y))
     )
+
+    j = 0.000629 * y**4 / (3.493e-9 + y**4) - 2.67 * y**2 / (1 + 1e7 * y**4.3)
+    k = 5.18 + 0.2803 * y**3.5 / (3.788e-6 + y * 4)
+    DeltaP_s = 10.47 / r**a + b / r**c + d * e / (1 + f * r**g) + h + j / r**k
+
     """
     # FORTRAN version (appendix B)
+    # overall the two version seems largely similar
 
-    h = (
+    # from FORTRAN, BB
+    bb = (
+        0.0629
+        * ((x / y) ** 8.34)
+        / (1 + 0.00509 * ((x / y) ** 13.05))
+        * 0.05
+        * y
+        / (1 + 2.56e-8 * (y**5))
+    )
+
+    hh = (
         +8.808 * (z**1.5) / (1 + 154.5 * (z**3.5))
         - (0.2905 + 64.67 * (z**5)) / (1 + 441.5 * (z**5))
         - 1.389 * z / (1 + 49.03 * (z**5))
@@ -87,9 +93,6 @@ def _DeltaP_s(GR, H, W):
         * (r**2)
         / ((0.7813e9 - 1.234e5 * r + 1201 * (r**1.5) + (r**2)) * (1 + 2 * y))
     )  # yeah this error is pretty egregious
-
-    # j = 0.000629 * y**4 / (3.493e-9 + y**4) - 2.67 * y**2 / (1 + 1e7 * y**4.3)
-    # k = 5.18 + 0.2803 * y**3.5 / (3.788e-6 + y * 4)
 
     # from FORTRAN P, Q corresponds to j, k here.
     p = 1.8008e-7 * (y**4) / (1 + 0.0002863 * (y**4)) - 2.121 * y**2 / (
@@ -100,38 +103,45 @@ def _DeltaP_s(GR, H, W):
     DeltaP_s = (
         10.47 / r**a + (b - bb) / r**c + d * e / (1 + f * r**g) + h + p / r**q
     )
-
-    # DeltaP_s1 = 10.47 / r**a + b / r**c + d * e / (1 + f * r**g) + h1 + j / r**k
-
-    # print(DeltaP_s - DeltaP_s1)
-
+    """
     return DeltaP_s
 
 
-"""
-def _T(GR, H, W):
-    
-    close-in time of arrival versus shock radius, in millisecond, eq.41
-    intended as a helper function
+def _u(r):
+    """
+    r: scaled range in kilofeet per cube-root kiloton
 
-    "is valid for 1e-3 < T < 26,000 ms at 1 KT. This more complex fit is
-     advisable for pressures above 10,000 psi, or scaled times less
-     than 0.6 ms/KT^(1/3). For a surface burst, use m = (2W)^(1/3)."
+    """
+
+    return (
+        (0.543 - 21.8 * r + 386 * (r**2) + 2383 * (r**3))
+        * (r**8)
+        / (
+            2.99e-14
+            - 1.91e-10 * (r**2)
+            + 1.032e-6 * (r**4)
+            - 4.43e-6 * (r**6)
+            + (1.028 + 2.087 * r + 2.69 * (r**2)) * (r**8)
+        )
+    )
 
 
-    GR: ground range in ft
-    H: height in ft
-    W: yield in kt
+def _w(r):
+    """
+    r: scaled range in kilofeet per cube-root kiloton
 
-    m = W ** (1 / 3)
-    r = (GR**2 + H**2) ** 0.5 / m / 1000
-
-    a = (0.543 - 21.8 * r + 386 * r**2 + 2383 * r**3) * r**8
-    b = 1e-6 * (2.99e-8 - 1.91e-4 * r**2 + 1.032 * r**4 - 4.43 * r**6)
-    c = (1.028 + 2.087 * r + 2.69 * r**2) * r**8
-
-    return m * a / (b + c)
-"""
+    """
+    return (
+        (1.086 - 34.605 * r + 486.3 * (r**2) + 2383 * (r**3))
+        * (r**8)
+        / (
+            3.0137e-13
+            - 1.2128e-9 * (r**2)
+            + 4.128e-6 * (r**4)
+            - 1.116e-5 * (r**6)
+            + (1.632 + 2.629 * r + 2.69 * (r**2)) * (r**8)
+        )
+    )
 
 
 def _Xm(GR, H, W):
@@ -168,19 +178,11 @@ def _tau(GR, H, W, Xm=None):
     if Xm is None:
         Xm = _Xm(GR, H, W)
 
+    """
+    # using this procedure (as documented in the original FORTRAN listing)
+    # results in a larger error
+
     R = (X**2 + Y**2) ** 0.5 / 1000
-
-    """
-    if X <= Xm:  # free-air burst toa
-        # tau = _u(r) # _u equivalent to _T
-        # tau = _T(GR, H, 1)
-        tau = _T(GR, H, W) / m
-    else:  # surface burst toa
-        # tau = _u(rm) + _w(r) - _w(rm) # _w equivalent to _T with 2 kT
-        # tau = _T(Xm * m, H, 1) + _T(GR, H, 2) - _T(Xm * m, H, 2)
-        tau = (_T(Xm * m, H, W) + _T(GR, H, 2 * W) - _T(Xm * m, H, 2 * W)) / m
-    """
-
     U = (
         (0.543 - 21.8 * R + 386 * (R**2) + 2383 * (R**3))
         * (R**8)
@@ -209,10 +211,18 @@ def _tau(GR, H, W, Xm=None):
     else:
         tau = U
 
+    """
+    rm = (Xm**2 + Y**2) ** 0.5 / 1000
+    r = (X**2 + Y**2) ** 0.5 / 1000
+    if X <= Xm:
+        tau = _u(r)
+    else:
+        tau = _u(rm) + _w(r) - _w(rm)
+
     return tau
 
 
-def _D(GR, H, W, tau=None):
+def _D(GR, H, W, tau=None, Xm=None):
     """
     overpressure duration of positive phase in milliseconds
 
@@ -228,7 +238,9 @@ def _D(GR, H, W, tau=None):
     Y = H / m  # ft/kT^(1/3)
 
     if tau is None:
-        tau = _tau(GR, H, W)
+        if Xm is None:
+            Xm = _Xm(GR, H, W)
+        tau = _tau(GR, H, W, Xm)
 
     s2 = (
         1
@@ -261,7 +273,7 @@ def _D(GR, H, W, tau=None):
     return D
 
 
-def _D_u(GR, H, W, D=None, Xm=None, DeltaP_s=None):
+def _D_u(GR, H, W, D=None, Xm=None, DeltaP_s=None, tau=None):
     """
     positive phase duration for dynamic pressure in milliseconds,
     duration of outward blast wind
@@ -284,6 +296,9 @@ def _D_u(GR, H, W, D=None, Xm=None, DeltaP_s=None):
     if Xm is None:
         Xm = _Xm(GR, H, W)
 
+    if tau is None:
+        tau = _tau(GR, H, W, Xm)
+
     if x * 1000 < Xm:  # in free-air-burst
         if DeltaP_s is None:
             _pi = _DeltaP_s(GR, H, W) / 1000  # in ksi
@@ -299,7 +314,7 @@ def _D_u(GR, H, W, D=None, Xm=None, DeltaP_s=None):
 
     else:  # in surface-burst
         if D is None:
-            D = _D(GR, H, W)
+            D = _D(GR, H, W, tau, Xm)
 
         C = (
             89.6 * y**5.2 / (1 + 20.5 * y**5.4)
@@ -384,7 +399,7 @@ def _DeltaP(GR, H, W, t, integrate=True):
 
     tau = _tau(GR, H, W, Xm)
 
-    D = _D(GR, H, W, tau)
+    D = _D(GR, H, W, tau, Xm)
 
     s = (
         1
@@ -426,6 +441,7 @@ def _DeltaP(GR, H, W, t, integrate=True):
     g = (
         10 + (77.58 - 64.99 * tau**0.125 / (1 + 0.04348 * tau**5)) * s
     )  # early time decay power, tau raised to 0.5 in work, 5 in FORTRAN
+    # which ever one is better is not established at this moment
 
     h = (
         3.003
@@ -595,7 +611,9 @@ def _Q(GR, H, W, t, integrate=True):
 
     tau = _tau(GR, H, W, Xm)
 
-    D_u = _D_u(GR, H, W)
+    DeltaP_s = _DeltaP_s(GR, H, W)
+
+    D_u = _D_u(GR, H, W, None, Xm, DeltaP_s, tau)
 
     s = (
         1
@@ -670,8 +688,6 @@ def _Q(GR, H, W, t, integrate=True):
         + 0.004755 * (Y / 10) ** 8.049 / (1 + 0.003444 * (Y / 10) ** 7.497)
         - 0.04852 * (Y / 10) ** 3.423 / (1 + 0.03038 * (Y / 10) ** 2.538)
     ) / (1 + 9.23 * K**2)
-
-    DeltaP_s = _DeltaP_s(GR, H, W)
 
     """ time independent scaling factors for Q calculation"""
 
@@ -933,8 +949,8 @@ def airburst(GR_m, H_m, W, t=None, prettyPrint=True):
     DeltaP_s = _DeltaP_s(GR, H, W)
     Q_s = _Q_s(GR, H, W)
 
-    D = _D(GR, H, W, tau)
-    D_u = _D_u(GR, H, W, D, Xm, DeltaP_s)
+    D = _D(GR, H, W, tau, Xm)
+    D_u = _D_u(GR, H, W, D, Xm, DeltaP_s, tau)
 
     XM = _uc_ft2m(Xm * m)
     TAAIR = tau * m / 1000  # ms to s
@@ -1048,9 +1064,9 @@ if __name__ == "__main__":
     by default, runs a test
     """
 
-    from HeWu.test import runtest
+    airburst(10 * 10000 ** (1 / 3), 7.62 * (10000) ** (1 / 3), 10000)
 
-    airburst(29.75, 7.62, 1, 124e-3)
+    from HeWu.test import runtest
 
     def _airburst_to_op(gr, h, Y, t):
         _, _, _, _, _, p, _, _, _, _, _, _, _, _ = airburst(gr, h, Y, t, False)

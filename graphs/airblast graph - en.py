@@ -303,7 +303,7 @@ def onclick(event):
         pd,
         cmap=cmap,
         alpha=0.75,
-        levels=np.linspace(pdmin, pdmax, 8),
+        levels=np.linspace(pdmin, pdmax, 11),
     )
 
     _, top = ax2.get_ylim()
@@ -328,7 +328,7 @@ def onclick(event):
         cmap=cmap,
         alpha=0.75,
         linestyles=":",
-        levels=np.linspace(pdmin, pdmax, 8),
+        levels=np.linspace(pdmin, pdmax, 11),
     )
     _, top = ax5.get_ylim()
     axins5 = inset_axes(
@@ -359,7 +359,7 @@ def onclick(event):
         alpha=0.75,
         cmap=cmap,
         locator=ticker.LogLocator(),
-        levels=np.logspace(log10(ipmin), log10(ipmax), 8),
+        levels=np.logspace(log10(ipmin), log10(ipmax), 11),
         # levels=np.linspace(ipmin, ipmax, 10),
     )
 
@@ -382,7 +382,7 @@ def onclick(event):
         alpha=0.75,
         cmap=cmap,
         locator=ticker.LogLocator(),
-        levels=np.logspace(log10(ipmin), log10(ipmax), 8),
+        levels=np.logspace(log10(ipmin), log10(ipmax), 11),
     )
 
     _, top = ax6.get_ylim()

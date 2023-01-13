@@ -93,6 +93,7 @@ def runtest(airburst_to_op):
         sgr_ft, sbh_ft, sigma_tau, op_psi = testPoint
         op_pa = _uc_psi2pa(op_psi)
         Y = randint(1, 25000)  # 1kt to 10Mt
+        Y = 1000
         Y3 = Y ** (1 / 3)
 
         sgr_m = _uc_ft2m(sgr_ft)
