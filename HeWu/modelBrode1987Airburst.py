@@ -9,16 +9,14 @@ Harold L. Brode, July 1987
 Technical Report
 CONTRACT No. DNA 001-85-C-0089  
 
-This model is in general quite decent up to a pressure range of 100,000-200,000 psi
+This section mainly reflects equation from section IV, falling back to using the 
+equations in III when in the free-air region.
 
 """
 from math import log10, exp
 from HeWu.uc import _uc_m2ft, _uc_psi2pa, _uc_ft2m
 
 from HeWu.intg import intg
-
-
-tol = 1e-5
 
 
 def _DeltaP_s(GR, H, W):
@@ -307,6 +305,8 @@ def _D_u(GR, H, W, D=None, Xm=None, DeltaP_s=None, tau=None):
         else:
             _pi = DeltaP_s / 1000
 
+        """ see equation 52) """
+
         D_u_pos = m * (
             317 / (1 + 85 * _pi + 7500 * _pi**2)
             + 6110 * _pi / (1 + 420 * _pi**2)
@@ -519,13 +519,13 @@ def _DeltaP(GR, H, W, t, integrate=True):
     start = tau
     end = tau + D / m
 
-    if start - sigma > tol:
+    if start - sigma > 1e-9:
         raise ValueError(
             "blast wave hasn't arrived at the specified time ( {} ms < {} ms )".format(
                 t, start * m
             )
         )
-    if sigma - end > tol:
+    if sigma - end > 1e-9:
 
         raise ValueError(
             "positive phase for over pressure is over ( {} ms > {} ms )".format(
@@ -748,13 +748,13 @@ def _Q(GR, H, W, t, integrate=True):
     start = tau
     end = tau + D_u / m
 
-    if start - sigma > tol:
+    if start - sigma > 1e-9:
         raise ValueError(
             "blast wave hasn't arrived at the specified time ( {} ms < {} ms )".format(
                 t, start * m
             )
         )
-    if sigma - end > tol:
+    if sigma - end > 1e-9:
         raise ValueError(
             "positive phase for dynamic pressure is over ( {} ms > {} ms )".format(
                 t, end * m
@@ -1068,10 +1068,10 @@ if __name__ == "__main__":
 
     airburst(10 * 10000 ** (1 / 3), 7.62 * (10000) ** (1 / 3), 10000)
 
-    from HeWu.test import runtest
+    from HeWu.test import runABtest
 
     def _airburst_to_op(gr, h, Y, t):
         _, _, _, _, _, p, _, _, _, _, _, _, _, _ = airburst(gr, h, Y, t, False)
         return p
 
-    runtest(_airburst_to_op)
+    runABtest(_airburst_to_op)
