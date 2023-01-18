@@ -373,7 +373,7 @@ def _s_D_u_pos(DeltaP_s):
     but it differs significantly from the 1-KT standard [Needham and Crepeau, 1981].
     The difference is illustrated in Fig. 18 (scaled to 1-MT surface burst).
     Such a disparity between results of detailed numerical (one-dimensional)
-    calculations is a measure of the dif¬ ferences introduced by dissimilarities
+    calculations is a measure of the differences introduced by dissimilarities
     in boundary and initial conditions, equations of state and opacities, and by
     various treatments of radiation transport, thermal radiation losses, and
     accumulated numerical errors in detailed computer calculations.
@@ -541,15 +541,28 @@ def _theta_and_t_m(DeltaP_s):
     The time to maximum temperature cannot be rigorously scaled; but assuming
     cube-root scaling, that time is roughly inversely proportional to the peak
     overpressure (free-air burst): Eqn. (60)
+    "
+
+    It is observed that calculating the maximum of the two values results in a
+    closer fit in all range (see validation)
     """
 
     _pi = DeltaP_s / 1000  # in ksi
 
-    theta_m = 1090 * _pi**3.26 / (1 + 35.6 * _pi**2.75)
+    theta_m = 1090 * _pi**3.26 / (1 + 35.6 * _pi**2.75)  # Eqs. (59)
+    # this formulation works at high pressure, drops off too low at lower ones
+
+    theta_s = (
+        5.310
+        * _pi
+        * (1 + 34 * _pi)
+        / (1 + 58.3 * _pi + 6.53 * _pi**3.5 / (1 + 0.2027 * _pi**2))
+    )  # Eqs. (23) modified by dividing by 1000
+    # this formulation works at lower pressure, drops off too low at high pressure
 
     t_m = 19 / _pi
 
-    return theta_m, t_m
+    return max(theta_m, theta_s), t_m
 
 
 def _D_p_neg(m):
@@ -593,37 +606,40 @@ def freeair(R, Y, t=None, prettyPrint=True):
     Q_s = _Q_s_over_Delta_P_s(DeltaP_s) * DeltaP_s
     tau = _ci_tau_to_r(r)
 
-    D_p_pos = _s_D_p_pos_to_DeltaP_s(DeltaP_s) * m
-    I_p_pos = _s_I_p_pos(DeltaP_s) * m
-    D_u_pos = _s_D_u_pos(DeltaP_s) * m
-    I_u_pos = _s_I_u_pos_to_r(r) * m
+    D_p_pos = _s_D_p_pos_to_DeltaP_s(DeltaP_s) * m  # in ms
+    I_p_pos = _s_I_p_pos(DeltaP_s) * m  # in ms
+    D_u_pos = _s_D_u_pos(DeltaP_s) * m  # in ms
+    I_u_pos = _s_I_u_pos_to_r(r) * m  # in ms
 
     theta_m, t_m = _theta_and_t_m(DeltaP_s)
 
-    T = tau * m / 1000
+    D_p_neg = _D_p_neg(m)
+
+    T = tau * m / 1000  # in seconds
+
     if t is not None:
 
         if t < T:
             OP = "Not Yet Arrived"
             DeltaP_t = 0
 
-        elif t < T + D_p_pos:
+        elif t < T + D_p_pos / 1000:
             OP = "Positive"
             DeltaP_t = _DeltaP(t * 1000, tau, m, D_p_pos / m)
 
-        elif t < T + D_p_pos + D_p_neg:
+        elif t < T + D_p_pos / 1000 + D_p_neg / 1000:  # in seconds
             OP = "Negative"
             DeltaP_t = _DeltaP_neg(t * 1000, m, DeltaP_s, D_p_neg)
 
         else:
-            op = "Passed"
+            OP = "Passed"
             DeltaP_t = 0
 
         if t < T:
             DP = "Not Yet Arrived"
             Q_t = 0
 
-        elif t < T + D_p_pos:
+        elif t < T + D_p_pos / 1000:  # in seconds
             DP = "Positive"
             Q_t = _Q(t * 1000, tau, m, DeltaP_s, Q_s, D_u_pos)
             # Q_t = _Q(t, tau, m)
@@ -631,28 +647,30 @@ def freeair(R, Y, t=None, prettyPrint=True):
             DP = "Negative/Passed"
             Q_t = None
 
-        DeltaP_t = _uc_psi2pa(DeltaP_t)
-        Q_t = _uc_psi2pa(Q_t)
     else:
         DeltaP_t = None
         Q_t = None
 
+    if DeltaP_t is not None:
+        DeltaP_t = _uc_psi2pa(DeltaP_t)
+    if Q_t is not None:
+        Q_t = _uc_psi2pa(Q_t)
+
     t_m *= m / 1000  # scaling as well as ms-> s
-    theta_m *= 1e3  # convert to C
+    theta_m *= 1e3  # convert to deg C
 
     DeltaP_s = _uc_psi2pa(DeltaP_s)
-
-    D_p_pos = D_p_pos / 1000
+    Q_s = _uc_psi2pa(Q_s)
     I_p_pos = _uc_psi2pa(I_p_pos / 1000)
-
-    D_u_pos = D_u_pos / 1000
     I_u_pos = _uc_psi2pa(I_u_pos / 1000)
 
-    D_p_neg = _D_p_neg(m) / 1000
+    D_p_pos /= 1000  # ms to s
+    D_u_pos /= 1000  # ms to s
+    D_p_neg /= 1000  # ms to s
 
     if prettyPrint:
         print("{:^49}".format("INPUT"))
-        print("Range{:.>16,.6g} Pa Yield{:.>15,.6g} Pa ".format(R, Y))
+        print("Range{:.>16,.6g} m Yield{:.>16,.6g} m ".format(R, Y))
 
         print(
             "Time To:{:.>37} s".format("{:,.6g}".format(t) if t is not None else "N/A")
@@ -681,9 +699,6 @@ def freeair(R, Y, t=None, prettyPrint=True):
 
 
 if __name__ == "__main__":
-
-    freeair(1000, 1, 2.5)
-
     from HeWu.test import runFAtest
 
     def _freeair_test(R, Y):

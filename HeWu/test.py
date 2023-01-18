@@ -56,7 +56,7 @@ abtests = (
 """
 test caes for 1 kT free-air bursts, in the format of:
     ΔP_s  peak overpressure in psi
-    sr    shock radius in ft
+    r    shock radius in ft / kT^(1/3) # original table annotated sr, should be r if scaled
     T     time of arrival in ms/kT^(1/3)
     D^+_p overpressure positive phase duration in ms/kT^(1/3)
     I^+_p overpressure impulse in psi-ms/kT^(1/3)
@@ -259,7 +259,7 @@ def runFAtest(freeair_from_r):
 
         dP_s_ref = _uc_psi2pa(dP_s_ref)
 
-        r = _uc_ft2m(r_ref)
+        r = _uc_ft2m(r_ref * m)
 
         T_ref = sT_ref * m / 1000
 

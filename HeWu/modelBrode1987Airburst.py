@@ -12,6 +12,7 @@ CONTRACT No. DNA 001-85-C-0089
 This section mainly reflects equation from section IV, falling back to using the 
 equations in III when in the free-air region.
 
+
 """
 from math import log10, exp
 from HeWu.uc import _uc_m2ft, _uc_psi2pa, _uc_ft2m
@@ -148,6 +149,14 @@ def _Xm(GR, H, W):
     """
     scaled range at which Mach reflection begins for a given burst height,
     onset of Mach reflection locus,in ft per kT**(1/3)
+
+                                  path of triple point
+                                        __/
+                                   ____/
+                            ______/    \
+                    _______/            \Mach stem (merged, single front)
+    _______________/---------------------|----
+    reg.ref.region  mach reflection region
 
     GR: ground range in feet
     H: height of burst in feet
@@ -380,8 +389,8 @@ def _DeltaP(GR, H, W, t, integrate=True):
     //--------------x
 
     r.r.: regular reflection region
-    2>1 : Mach second peak > first peak
-    1>2 : Mach second peak < first peak
+    2>1 : mach reflection region, second peak > first peak
+    1>2 : mach reflection region, second peak < first peak
 
     """
 
@@ -1065,8 +1074,6 @@ if __name__ == "__main__":
     """
     by default, runs a test
     """
-
-    airburst(10 * 10000 ** (1 / 3), 7.62 * (10000) ** (1 / 3), 10000)
 
     from HeWu.test import runABtest
 
