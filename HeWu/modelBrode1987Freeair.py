@@ -67,10 +67,10 @@ def _DeltaP_s_to_r(r):
         2 / r
         + 3 / r**1.5
         + 1.6 / r**3 * (1 + 105 * (10 * r) ** 4 / (1 + 12920 * (10 * r) ** 8))
-    )  # in psi
+    )  # Eqn. (33)
 
 
-def _r_to_DeltaP_s(DeltaP_s):
+def _r(DeltaP_s):
     """
     shock radius versus peak overpressure for free air burst, in kft/kT^(1/3)
 
@@ -95,7 +95,7 @@ def _r_to_DeltaP_s(DeltaP_s):
 
     return 2.463 / (DeltaP_s**0.9846) + 1.176 / (DeltaP_s ** (1 / 3)) * (
         1 + 0.0004726 * _pi**1.5 / (1 + 2.952e-6 * _pi**3)
-    )
+    )  # Eqn. (36)
 
 
 def _DeltaP_s_to_tau(tau):
@@ -132,7 +132,7 @@ def _tau_to_DeltaP_s(DeltaP_s):
     Arguemnts:
     - DeltaP_s, peak overpressure in psi
     Returns:
-    - tau: scaled time of arrival in millisecond per square root kiloton
+    - tau: scaled time of arrival in millisecond per cube root kiloton
 
     "
     Conversely, the time of arrival T can be expressed as a function of the peak
@@ -159,7 +159,7 @@ def _tau_to_r(r):
     Arguemnts:
     - r, scaled ground range in kilofeet per cube-root kiloton
     Returns:
-    - tau: scaled time of arrival in millisecond per square root kiloton
+    - tau: scaled time of arrival in millisecond per cube root kiloton
 
     "
     This shock arrival-time form is limited to the range of the "Empirical 59"
@@ -171,7 +171,7 @@ def _tau_to_r(r):
 
     return (0.54291 - 21.185 * r + 361.8 * r**2 + 2383 * r**3) / (
         1 + 2.048 * r + 2.6872 * r**2
-    )
+    )  # Eqn. (40), scaled
 
 
 def _ci_tau_to_r(r):
@@ -184,7 +184,7 @@ def _ci_tau_to_r(r):
     - r, scaled ground range in kft per cube-root kiloton
 
     Returns:
-    -tau: scaled time of arrival in milliseconds per square root kiloton
+    -tau: scaled time of arrival in milliseconds per cube root kiloton
 
 
     "
@@ -213,7 +213,7 @@ def _s_D_p_pos_to_tau(tau):
     Arguments:
     - tau, scaled time of arrival in milliseconds per square root kiloton
     Returns:
-    - D_p_pos, scaled time of positive overpressure duration in ms per square
+    - scaled D_p_pos, time of positive overpressure duration in ms per cube
     root killton
 
     "
@@ -314,14 +314,15 @@ def _s_I_p_pos(DeltaP_s):
     )  # Eqn. (48) in scaled formulation
 
 
-def _DeltaP(t, tau, m, _s_D_p_pos=None):
+def _DeltaP(t, tau, m, s_D_p_pos=None):
     """
     Overpressure versus time
 
     Arguments:
-    - t: arbitrary time after detonation, t >= T.
+    - t: arbitrary time after detonation, t >= T, in milliseconds
+    - tau: scaled time of arrival in milliseconds per square root kiloton
     - m: yield scaling factor, cube-root kiloton
-    -
+    - s_D_p_pos: scaled overpressure positive phase duration in ms/kT^(1/3)
 
     Returns:
     - scaled DeltaP: overpressure at time t in psi per cube-root kiloton
@@ -336,8 +337,8 @@ def _DeltaP(t, tau, m, _s_D_p_pos=None):
     sigma = t / m
     DeltaP_s = _DeltaP_s_to_tau(sigma)  # yes
 
-    if _s_D_p_pos is None:  # any of the Eqn.(43) to (46) could be used here
-        _s_D_p_pos = _s_D_p_pos_to_tau(tau)
+    if s_D_p_pos is None:  # any of the Eqn.(43) to (46) could be used here
+        s_D_p_pos = _s_D_p_pos_to_tau(tau)
 
     return (
         DeltaP_s
@@ -348,7 +349,7 @@ def _DeltaP(t, tau, m, _s_D_p_pos=None):
             * (40 * (tau / sigma) ** 6 + tau**2)
             / (40 + tau**2)
         )
-        * (1 - (sigma - tau) / _s_D_p_pos)
+        * (1 - (sigma - tau) / s_D_p_pos)
     )  # in Eqn.(49)
 
 
@@ -478,6 +479,11 @@ def _Q(t, tau, m, DeltaP_s=None, Q_s=None, D_u_pos=None):
 
     Arguments:
     - t, time, t>=T
+    - tau, scaled time of arrival
+    - m, scaling factor
+    - (optionally) DeltaP_s, peak overpressure
+    - (optionally) Q_s, peak dynamic pressure
+    - (optionally) D_u_pos, dynamic pressure duration
 
     Returns:
     - Q, dynamic pressure in psi
@@ -510,16 +516,129 @@ def _Q(t, tau, m, DeltaP_s=None, Q_s=None, D_u_pos=None):
     return Q_s * (1 - w) ** 2 * (d * exp(-a * w) + (1 - d) * exp(-b * w))  # Eqn.(56)
 
 
-def freeair(R, Y):
+def _theta_and_t_m(DeltaP_s):
+    """
+
+    Arguments:
+    - DeltaP_s, peak overpressure
+    Returns:
+    - theta_m, maximum temperature, in 10^3 deg C
+    - t_m, scaled time to maximum temperature, in milliseconds in square root kiloton
+
+    "
+    Another parameter of interest is the maximum temperature at a given range.
+    The maximum temperature at overpressure levels above 100 psi occurs after
+    shock arrival, as hotter fireball air expands past that point. That maximum
+    temperature is somewhat dependent on yield, since the fireball of a megaton
+    burst cools more slowly than that of a kiloton burst (even if cube-root
+    scaling is applied). The rough fit of Eq. (59) is appropriate for a megaton
+    and is based on earlier calculations by Brode [1959b]: Eqn. (59)
+
+    More recently, improved opacities for air have led to slightly higher fireball
+    temperatures at corresponding times, so that temperatures somewhat above
+    those predicted by Eq. (59) are likely.
+
+    The time to maximum temperature cannot be rigorously scaled; but assuming
+    cube-root scaling, that time is roughly inversely proportional to the peak
+    overpressure (free-air burst): Eqn. (60)
+    """
+
+    _pi = DeltaP_s / 1000  # in ksi
+
+    theta_m = 1090 * _pi**3.26 / (1 + 35.6 * _pi**2.75)
+
+    t_m = 19 / _pi
+
+    return theta_m, t_m
+
+
+def _D_p_neg(m):
+    return 1051 * m  # duration of negative phase in ms
+
+
+def _DeltaP_neg(t, m, DeltaP_s, D_p_neg):
+    """
+    time history for negative overpressure, or underpressure
+    Arguments:
+    - t, some time after the beginning of negative pressure, in milliseconds
+    - m, yiled scaling factor in square root kiloton
+
+    Returns:
+    - DeltaP_neg, underpressure in psi
+
+    """
+
+    t_n = (
+        151.4 + 2844 / DeltaP_s**0.9638
+    ) * m  #  time of beginning of negative phase
+
+    An = 0.2532 * DeltaP_s / (1 + 0.1262 * DeltaP_s) + 413.2 * (DeltaP_s / 100) ** 4 / (
+        1 + 668.1 * (DeltaP_s / 100) ** 5
+    )
+    Bn = 2.481 * DeltaP_s / (1 + 0.004272 * DeltaP_s**1.7)
+    Cn = 18.55 * (DeltaP_s / 100) ** 8 / (1 + 2.75 * (DeltaP_s / 100) ** 7.335)
+
+    tau = (t - t_n) / D_p_neg
+
+    Po = 14.7  # we use a fixed value for the ambient here
+
+    return -Po * An * tau * (1 - tau) / (1 + Bn * tau**2 + Cn * tau**3)
+
+
+def freeair(R, Y, t=None, prettyPrint=True):
 
     m = Y ** (1 / 3)
     r = _uc_m2ft(R) / m / 1000
     DeltaP_s = _DeltaP_s_to_r(r)
-    T = _ci_tau_to_r(r) * m / 1000
+    Q_s = _Q_s_over_Delta_P_s(DeltaP_s) * DeltaP_s
+    tau = _ci_tau_to_r(r)
+
     D_p_pos = _s_D_p_pos_to_DeltaP_s(DeltaP_s) * m
     I_p_pos = _s_I_p_pos(DeltaP_s) * m
     D_u_pos = _s_D_u_pos(DeltaP_s) * m
     I_u_pos = _s_I_u_pos_to_r(r) * m
+
+    theta_m, t_m = _theta_and_t_m(DeltaP_s)
+
+    T = tau * m / 1000
+    if t is not None:
+
+        if t < T:
+            OP = "Not Yet Arrived"
+            DeltaP_t = 0
+
+        elif t < T + D_p_pos:
+            OP = "Positive"
+            DeltaP_t = _DeltaP(t * 1000, tau, m, D_p_pos / m)
+
+        elif t < T + D_p_pos + D_p_neg:
+            OP = "Negative"
+            DeltaP_t = _DeltaP_neg(t * 1000, m, DeltaP_s, D_p_neg)
+
+        else:
+            op = "Passed"
+            DeltaP_t = 0
+
+        if t < T:
+            DP = "Not Yet Arrived"
+            Q_t = 0
+
+        elif t < T + D_p_pos:
+            DP = "Positive"
+            Q_t = _Q(t * 1000, tau, m, DeltaP_s, Q_s, D_u_pos)
+            # Q_t = _Q(t, tau, m)
+        else:
+            DP = "Negative/Passed"
+            Q_t = None
+
+        DeltaP_t = _uc_psi2pa(DeltaP_t)
+        Q_t = _uc_psi2pa(Q_t)
+    else:
+        DeltaP_t = None
+        Q_t = None
+
+    t_m *= m / 1000  # scaling as well as ms-> s
+    theta_m *= 1e3  # convert to C
 
     DeltaP_s = _uc_psi2pa(DeltaP_s)
 
@@ -529,13 +648,50 @@ def freeair(R, Y):
     D_u_pos = D_u_pos / 1000
     I_u_pos = _uc_psi2pa(I_u_pos / 1000)
 
-    return (DeltaP_s, T, D_p_pos, I_p_pos, D_u_pos, I_u_pos, 0)
+    D_p_neg = _D_p_neg(m) / 1000
+
+    if prettyPrint:
+        print("{:^49}".format("INPUT"))
+        print("Range{:.>16,.6g} Pa Yield{:.>15,.6g} Pa ".format(R, Y))
+
+        print(
+            "Time To:{:.>37} s".format("{:,.6g}".format(t) if t is not None else "N/A")
+        )
+
+        print("{:^49}".format("OUTPUT"))
+        print("Time of Arrival:{:.>29,.6g} s".format(T))
+
+        print("")
+        print("TOTAL{:>19}{:>24} ".format("Overpressure", "Dynamic Pressure"))
+        print("Peak:{:.>16,.6g} Pa{:.>21,.6g} Pa ".format(DeltaP_s, Q_s))
+        print("Duration:{:>12,.6g} s{:>22,.6g} s ".format(D_p_pos, D_u_pos))
+        print("Impulse:{:.>13,.6g} Pa-s{:.>19,.6g} Pa-s".format(I_p_pos, I_u_pos))
+
+        if t is not None:
+            print("")
+            print("PARTIAL{:>17}{:>24} ".format("Overpressure", "Dynamic Pressure"))
+            print("Phase:{:.>18}{:.>24}".format(OP, DP))
+            print(
+                "Value:{:.>15,.6g} Pa{:.>21} Pa".format(
+                    DeltaP_t, "{:,.6g}".format(Q_t) if Q_t is not None else "N/A"
+                )
+            )
+
+    return (DeltaP_s, DeltaP_t, Q_t, T, D_p_pos, I_p_pos, D_u_pos, I_u_pos, theta_m)
 
 
 if __name__ == "__main__":
 
+    freeair(1000, 1, 2.5)
+
     from HeWu.test import runFAtest
 
-    runFAtest(freeair)
+    def _freeair_test(R, Y):
+        (DeltaP_s, _, _, T, D_p_pos, I_p_pos, D_u_pos, I_u_pos, theta_m) = freeair(
+            R, Y, None, False
+        )
+        return DeltaP_s, T, D_p_pos, I_p_pos, D_u_pos, I_u_pos, theta_m
+
+    runFAtest(_freeair_test)
 
     pass
