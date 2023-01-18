@@ -74,7 +74,8 @@ def intg(f, l, u, tol=1e-3):
         I = I * 0.5 + dI
         k += 1
 
-        if d < tol or d < tol * I:
+        # if d < tol or d < tol * I:
+        if d < tol * abs(I):
             c += 1
         else:
             c = 0

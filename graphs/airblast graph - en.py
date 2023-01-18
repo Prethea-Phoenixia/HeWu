@@ -72,9 +72,13 @@ for gr in x:
         if iqi < 1:
             iqi = 1
 
-        IP[j][i] = ipi
+        # IP[j][i] = ipi
+        IP[j][i] = min(ipi, ipe)
         DPP[j][i] = dpp
-        IQ[j][i] = iqi
+        if iqe is not None:
+            IQ[j][i] = min(iqi, iqe)
+        else:
+            IQ[j][i] = iqi
         DPQ[j][i] = dpq
 
         j += 1

@@ -148,15 +148,15 @@ def _w(r):
 def _Xm(GR, H, W):
     """
     scaled range at which Mach reflection begins for a given burst height,
-    onset of Mach reflection locus,in ft per kT**(1/3)
+    onset of Mach reflection locus,in ft per kT**(1/3)   
 
-                                  path of triple point
-                                        __/
+                                        __ path of triple point      
                                    ____/
-                            ______/    \
-                    _______/            \Mach stem (merged, single front)
+                            ______/    \\
+                    _______/            \\Mach stem (merged front)
     _______________/---------------------|----
-    reg.ref.region  mach reflection region
+    reg.ref.region | mach reflection region
+                   Xm
 
     GR: ground range in feet
     H: height of burst in feet
@@ -308,7 +308,7 @@ def _D_u(GR, H, W, D=None, Xm=None, DeltaP_s=None, tau=None):
     if tau is None:
         tau = _tau(GR, H, W, Xm)
 
-    if x * 1000 < Xm:  # in free-air-burst
+    if x * 1000 < Xm:  # this is fitted to DeltaP_s so should work by first principle
         if DeltaP_s is None:
             _pi = _DeltaP_s(GR, H, W) / 1000  # in ksi
         else:
@@ -859,39 +859,13 @@ def _I_u_pos(GR, H, W, DeltaP_s=None):
     if x > 170 * psi / (1 + 337 * psi**0.25) + 0.914 * psi**2.5:  # x> Xi
         return (E * x / (F + x**3.61) + G / (1 + 0.22 * x**2)) * m
     else:
-        """
-        free air-burst estimation, within 10% for 3 psi < Delta P_s < 10,000 psi
-        high by ~20% at DeltaP_s = 100,000 psi
-
-        if DeltaP_s is None:
-            DeltaP_s = _DeltaP_s(GR, H, W)
-
-        return (
-            2.14 * DeltaP_s**1.637 * m / (1 + 0.00434 * DeltaP_s**1.431)
-        )  # psi-ms, eq. 54)
-
-
-        """
-
-        r = (x**2 + y**2) ** 0.5
-
-        """A fit to the dynamic impulse versus range for the early calculations
-         [Brode, 1959b] agrees to better than 10 percent for 0.0025 - 2kft/kT^(1/3)"""
-
-        return (
-            18.8 * r**2 / (1e-6 + 0.06896 * r**3 + 0.5963 * r**5.652)
-            + 92.64 / (100 * r) ** 5
-            + 2935
-            * (r - 0.00597)
-            * (0.01 - r)
-            * (0.0003552 - r**4)
-            / (1e-10 + 0.003377 * r**2.5 + 155.8 * r**8)
-        ) * m
+        return None  # we were unable to source a good enough estimation for this
 
 
 def _I_p_pos(GR, H, W, DeltaP_s=None, Xm=None):
     """
     positive phase impulse in psi-ms, using a simple fit against overpressure peak
+    this should work for airburst as well as free-air.
 
     GR: ground range, feet
     H: height of burst, feet
@@ -979,9 +953,11 @@ def airburst(GR_m, H_m, W, t=None, prettyPrint=True):
     I_p_est = _I_p_pos(GR, H, W, DeltaP_s, Xm)
     I_u_est = _I_u_pos(GR, H, W, DeltaP_s)
 
-    IQEST = _uc_psi2pa(I_u_est / 1000)
-
     IPEST = _uc_psi2pa(I_p_est / 1000)
+    if I_u_est is not None:
+        IQEST = _uc_psi2pa(I_u_est / 1000)
+    else:
+        IQEST = None
 
     IPTOTAL = _uc_psi2pa(I_p_pos / 1000)
     IQTOTAL = _uc_psi2pa(I_u_pos / 1000)
@@ -1074,7 +1050,8 @@ if __name__ == "__main__":
     """
     by default, runs a test
     """
-
+    airburst(200, 200, 1)
+    """
     from HeWu.test import runABtest
 
     def _airburst_to_op(gr, h, Y, t):
@@ -1082,3 +1059,4 @@ if __name__ == "__main__":
         return p
 
     runABtest(_airburst_to_op)
+    """
