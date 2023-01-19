@@ -9,6 +9,8 @@ from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import matplotlib.patches as patches
 from math import sqrt, log, log10
 
+from HeWu.uc import _uc_psi2pa
+
 
 Y = 1
 Y3 = Y ** (1 / 3)
@@ -61,8 +63,8 @@ for gr in x:
             groundRange, height, Y, None, False
         )
 
-        P[j][i] = p / 1e6
-        Q[j][i] = q / 1e6
+        P[j][i] = p / 1e6  # to MPa
+        Q[j][i] = q / 1e6  # to MPa
 
         T[j][i] = t
 
@@ -85,10 +87,10 @@ for gr in x:
 
     i += 1
 
-IP = ma.masked_where(IP is None, IP)
-IQ = ma.masked_where(IQ is None, IQ)
-DPP = ma.masked_where(DPP is None, DPP)
-DPQ = ma.masked_where(DPQ is None, DPQ)
+IP = ma.masked_where(P > _uc_psi2pa(2), IP)
+IQ = ma.masked_where(P > _uc_psi2pa(2), IQ)
+DPP = ma.masked_where(P > _uc_psi2pa(2), DPP)
+DPQ = ma.masked_where(P > _uc_psi2pa(2), DPQ)
 IP = IP / 1e3
 IQ = IQ / 1e3
 

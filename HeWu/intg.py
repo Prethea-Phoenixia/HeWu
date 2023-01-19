@@ -51,6 +51,22 @@ def intg(f, l, u, tol=1e-3):
     this is no-way guaranteed, it is convenient to take the increment as an upper bound
     on error. Therefore we check for three consecutive increments smaller than the specified
     tolerance before submitting the result as a good enough estimate for the integral.
+
+    Since specifying a relative error does not work well for values extremely close to 0.
+    Instead we define a error as abs(x_true - x_ref) / (1 + abs(x_ref)) x 100%.
+    For example, a 1% (0.01) relative error would translate to
+
+    reference value    acceptable range
+    10                  10.11 - 9.89
+    1                    0.98 - 1.02
+    0.1                 0.089 - 0.111
+    0                   -0.01 - 0.01
+
+    as can be seen, as the reference value approach 0, the absolute acceptable error approaches
+    the tolerance specified. On the otherhand as the reference value approach infinite, the
+    absolute error approaches the product of the specified tolerance and the reference value,
+    closer to the traditional definition of relative error.
+
     """
 
     a = (u - l) / 2
@@ -70,12 +86,12 @@ def intg(f, l, u, tol=1e-3):
             dI += f(a * u + b) * (1 - v**2)
 
         dI *= 1.5 * a * 2 ** (1 - k)
-        d = abs(I * 0.5 - dI)  # delta, change per iteration
-        I = I * 0.5 + dI
+        I1 = I * 0.5 + dI
+        d = abs(I1 - I)  # delta, change per iteration
+        I = I1
         k += 1
 
-        # if d < tol or d < tol * I:
-        if d < tol * abs(I):
+        if d < tol * (abs(I) + 1):
             c += 1
         else:
             c = 0
@@ -84,10 +100,4 @@ def intg(f, l, u, tol=1e-3):
 
 
 if __name__ == "__main__":
-
-    def f(x):
-        return x**2
-
-    # x^2 <- 1/3 * x^3
-
-    print(intg(f, 0, 1))
+    pass

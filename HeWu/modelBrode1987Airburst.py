@@ -1050,8 +1050,6 @@ if __name__ == "__main__":
     """
     by default, runs a test
     """
-    airburst(200, 200, 1)
-    """
     from HeWu.test import runABtest
 
     def _airburst_to_op(gr, h, Y, t):
@@ -1059,4 +1057,3 @@ if __name__ == "__main__":
         return p
 
     runABtest(_airburst_to_op)
-    """
