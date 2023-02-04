@@ -554,7 +554,7 @@ def _Q(GR, H, W, t, integrate=True):
 
     DeltaP_s = _DeltaP_s(GR, H, W)
 
-    sD_u = _D_u(GR, H, W, None, Xm, DeltaP_s, tau)  # scaled time
+    sD_u = _D_u(GR, H, W, None, Xm, DeltaP_s, tau) / m  # scaled time
 
     s = (
         1
@@ -875,10 +875,6 @@ def airburst(GR_m, H_m, W, t=None, prettyPrint=True):
 
     p, I_p_pos = _DeltaP(GR, H, W, (tau * m + D), integrate=True)
     q, I_u_pos = _Q(GR, H, W, (tau * m + D_u), integrate=True)
-
-    # print("")
-    # print("{:^10.2%},{:^10.2%}".format(p / DeltaP_s, q / Q_s))
-    # check if at the time of integration period, the pressures are close to 0
 
     I_p_est = _I_p_pos(GR, H, W, DeltaP_s, Xm)
     I_u_est = _I_u_pos(GR, H, W, DeltaP_s)
