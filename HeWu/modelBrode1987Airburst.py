@@ -30,12 +30,8 @@ def _DeltaP_s(GR, H, W):
 
     """
     m = W ** (1 / 3)
-    x = GR / m / 1000
-    y = H / m / 1000
 
-    r = (x**2 + y**2) ** 0.5
-
-    z = y / x
+    z = H / GR
 
     a = 1.22 - 3.908 * z**2 / (1 + 810.2 * z**5)
     b = (
@@ -57,6 +53,11 @@ def _DeltaP_s(GR, H, W):
 
     # In-text version
 
+    x = GR / m / 1000
+    y = H / m / 1000
+
+    r = (x**2 + y**2) ** 0.5
+
     h = (
         8.808 * z**1.5 / (1 + 154.5 * z**3.5)
         - (0.2905 + 64.67 * z**5) / (1 + 441.5 * z**5)
@@ -70,41 +71,6 @@ def _DeltaP_s(GR, H, W):
     k = 5.18 + 0.2803 * y**3.5 / (3.788e-6 + y * 4)
     DeltaP_s = 10.47 / r**a + b / r**c + d * e / (1 + f * r**g) + h + j / r**k
 
-    """
-    # FORTRAN version (appendix B)
-    # overall the two version seems largely similar
-
-    # from FORTRAN, BB
-    bb = (
-        0.0629
-        * ((x / y) ** 8.34)
-        / (1 + 0.00509 * ((x / y) ** 13.05))
-        * 0.05
-        * y
-        / (1 + 2.56e-8 * (y**5))
-    )
-
-    h = (
-        +8.808 * (z**1.5) / (1 + 154.5 * (z**3.5))
-        - (0.2905 + 64.67 * (z**5)) / (1 + 441.5 * (z**5))
-        - 1.389 * z / (1 + 49.03 * (z**5))
-        + 1.094
-        * (r**2)
-        / ((0.7813e9 - 1.234e5 * r + 1201 * (r**1.5) + (r**2)) * (1 + 2 * y))
-    )  # yeah this error is pretty egregious
-
-    # from FORTRAN P, Q corresponds to j, k here.
-    p = 1.8008e-7 * (y**4) / (1 + 0.0002863 * (y**4)) - 2.121 * y**2 / (
-        794300 + (y**4.3)
-    )
-    q = 5.18 + 8.864 * (y**3.5) / (3.788e6 + (y**4))
-
-    DeltaP_s_1 = (
-        10.47 / r**a + (b - bb) / r**c + d * e / (1 + f * r**g) + h + p / r**q
-    )
-
-    """
-
     return DeltaP_s
 
 
@@ -115,14 +81,14 @@ def _u(r):
     """
 
     return (
-        (0.543 - 21.8 * r + 386 * (r**2) + 2383 * (r**3))
-        * (r**8)
+        (0.543 - 21.8 * r + 386 * r**2 + 2383 * r**3)
+        * r**8
         / (
             2.99e-14
-            - 1.91e-10 * (r**2)
-            + 1.032e-6 * (r**4)
-            - 4.43e-6 * (r**6)
-            + (1.028 + 2.087 * r + 2.69 * (r**2)) * (r**8)
+            - 1.91e-10 * r**2
+            + 1.032e-6 * r**4
+            - 4.43e-6 * r**6
+            + (1.028 + 2.087 * r + 2.69 * r**2) * r**8
         )
     )
 
@@ -133,14 +99,14 @@ def _w(r):
 
     """
     return (
-        (1.086 - 34.605 * r + 486.3 * (r**2) + 2383 * (r**3))
-        * (r**8)
+        (1.086 - 34.605 * r + 486.3 * r**2 + 2383 * r**3)
+        * r**8
         / (
             3.0137e-13
-            - 1.2128e-9 * (r**2)
-            + 4.128e-6 * (r**4)
-            - 1.116e-5 * (r**6)
-            + (1.632 + 2.629 * r + 2.69 * (r**2)) * (r**8)
+            - 1.2128e-9 * r**2
+            + 4.128e-6 * r**4
+            - 1.116e-5 * r**6
+            + (1.632 + 2.629 * r + 2.69 * r**2) * r**8
         )
     )
 
@@ -181,49 +147,15 @@ def _tau(GR, H, W, Xm=None):
     Xm: optional, when supplied skips the call to _Xm
     """
     m = W ** (1 / 3)
-    X = GR / m  # ft/kT^(1/3)
-    Y = H / m  # ft/kT^(1/3)
+    x = GR / m  # ft/kT^(1/3)
+    y = H / m  # ft/kT^(1/3)
 
     if Xm is None:
         Xm = _Xm(GR, H, W)
 
-    """
-    # using this procedure (as documented in the original FORTRAN listing)
-    # results in a larger error
-
-    R = (X**2 + Y**2) ** 0.5 / 1000
-    U = (
-        (0.543 - 21.8 * R + 386 * (R**2) + 2383 * (R**3))
-        * (R**8)
-        / (
-            2.99e-14
-            - 1.91e-10 * (R**2)
-            + 1.032e-6 * (R**4)
-            - 4.43e-6 * (R**6)
-            + (1.028 + 2.087 * R + 2.69 * (R**2)) * (R**8)
-        )
-    )
-
-    if X > Xm:
-        W = (
-            (1.086 - 34.605 * R + 486.3 * (R**2) + 2383 * (R**3))
-            * (R**8)
-            / (
-                3.0137e-13
-                - 1.2128e-9 * (R**2)
-                + 4.128e-6 * (R**4)
-                - 1.116e-5 * (R**6)
-                + (1.632 + 2.629 * R + 2.69 * (R**2)) * (R**8)
-            )
-        )
-        tau = U * Xm / X + W * (1 - Xm / X)
-    else:
-        tau = U
-
-    """
-    rm = (Xm**2 + Y**2) ** 0.5 / 1000
-    r = (X**2 + Y**2) ** 0.5 / 1000
-    if X <= Xm:
+    rm = (Xm**2 + y**2) ** 0.5 / 1000
+    r = (x**2 + y**2) ** 0.5 / 1000
+    if x <= Xm:
         tau = _u(r)
     else:
         tau = _u(rm) + _w(r) - _w(rm)
@@ -369,7 +301,7 @@ def _DeltaP(GR, H, W, t, integrate=True):
     X = GR / m  # ft/kT^(1/3)
     Y = H / m  # ft/kT^(1/3)
 
-    z = min(H / GR, 100)  # see FORTRAN
+    z = H / GR
 
     Xm = _Xm(GR, H, W)  # onset of Mach reflection locus, scaled, in ft per kT**(1/3)
 
@@ -394,7 +326,7 @@ def _DeltaP(GR, H, W, t, integrate=True):
 
     """
 
-    K = min(abs((X - Xm) / (Xe - Xm)), 50)  # this is seen in the FORTRAN listing
+    K = abs((X - Xm) / (Xe - Xm))
 
     d2 = 2.99 + 31240 * (Y / 100) ** 9.86 / (1 + 15530 * (Y / 100) ** 9.87)
     d = (
@@ -410,7 +342,7 @@ def _DeltaP(GR, H, W, t, integrate=True):
 
     tau = _tau(GR, H, W, Xm)
 
-    D = _D(GR, H, W, tau, Xm)
+    sd = _D(GR, H, W, tau, Xm) / m  # scaled time of arrival
 
     s = (
         1
@@ -429,7 +361,7 @@ def _DeltaP(GR, H, W, t, integrate=True):
             + 7.571 * z**7.15 / (1 + 5.135 * z**12.9)
             - 8.07 * z**7.31 / (1 + 5.583 * z**12.23)
         )
-        * 0.435  # 0.4530 in paper, 0.435 in FORTAN
+        * 0.4530  # 0.4530 in paper, 0.435 in FORTAN
         * (Y / 10) ** 1.26
         / (1 + 0.03096 * (Y / 10) ** 3.12)
         * (1 - 0.000019 * tau**8 / (1 + 0.000019 * tau**8))
@@ -446,11 +378,11 @@ def _DeltaP(GR, H, W, t, integrate=True):
         - 3.077e-5 * tau**3 / (1 + 4.367e-5 * tau**3)
         + f2
         - (0.452 - 9.94e-7 * X**4.13 / (1 + 2.1868e-6 * X**4.13))
-        * (1 - 0.00015397 * Y**4.3 / (1 + 0.00015397 * Y**4.3))
+        * (1 - 1.5397e-4 * Y**4.3 / (1 + 1.5397e-4 * Y**4.3))
     )
 
     g = (
-        10 + (77.58 - 64.99 * tau**0.125 / (1 + 0.04348 * tau**5)) * s
+        10 + (77.58 - 64.99 * tau**0.125 / (1 + 0.04348 * tau**0.5)) * s
     )  # early time decay power, tau raised to 0.5 in work, 5 in FORTRAN
     # which ever one is better is not established at this moment
 
@@ -495,14 +427,13 @@ def _DeltaP(GR, H, W, t, integrate=True):
         """
 
         b = (f * (tau / sigma) ** g + (1 - f) * (tau / sigma) ** h) * (
-            1 - (sigma - tau) / D
+            1 - (sigma - tau) / sd
         )
 
         if X >= Xm and Y <= 380:
             j = min(
                 11860 * (sigma - tau) / (Y * (X - Xm) ** 1.25), 200
             )  # ratio of time after TOA to time to second peak after TOA,
-            # this absolute operation around X-Xm is inferred.
 
             v = v0 * j**3 / (6.13 + j**3) + 1
 
@@ -514,7 +445,7 @@ def _DeltaP(GR, H, W, t, integrate=True):
                 )
                 * (c2 + (1 - c2) * (1 - 0.09 * K**2.5 / (1 + 0.09 * K**2.5)))
                 * c3
-                * (1 - ((sigma - tau) / D) ** 8)
+                * (1 - ((sigma - tau) / sd) ** 8)
             )  # this is harder to split into time and non-time dependent part and left as is
 
             return (1 + a) * (b * v + c)
@@ -526,7 +457,7 @@ def _DeltaP(GR, H, W, t, integrate=True):
     sigma = t / m  # sigma is the scaled time in ms/kT^(1/3)
 
     start = tau
-    end = tau + D / m
+    end = tau + sd
 
     if start - sigma > 1e-9:
         raise ValueError(
@@ -597,8 +528,7 @@ def _Q(GR, H, W, t, integrate=True):
     m = W ** (1 / 3)
     X = GR / m  # ft/kT^(1/3)
     Y = H / m  # ft/kT^(1/3)
-
-    z = min(H / GR, 100)  # see FORTRAN
+    z = H / GR
 
     Xm = _Xm(GR, H, W)  # onset of Mach reflection locus, scaled, in ft per kT**(1/3)
 
@@ -606,7 +536,7 @@ def _Q(GR, H, W, t, integrate=True):
         3.039 * Y / (1 + 0.0067 * Y)
     )  # locus of points where second peak equals first peak, scaled in ft per kT**(1/3)
 
-    K = min(abs((X - Xm) / (Xe - Xm)), 50)  # this is seen in the FORTRAN listing
+    K = abs((X - Xm) / (Xe - Xm))
 
     d2 = 2.99 + 31240 * (Y / 100) ** 9.86 / (1 + 15530 * (Y / 100) ** 9.87)
     d = (
@@ -624,7 +554,7 @@ def _Q(GR, H, W, t, integrate=True):
 
     DeltaP_s = _DeltaP_s(GR, H, W)
 
-    D_u = _D_u(GR, H, W, None, Xm, DeltaP_s, tau)
+    sD_u = _D_u(GR, H, W, None, Xm, DeltaP_s, tau)  # scaled time
 
     s = (
         1
@@ -643,7 +573,7 @@ def _Q(GR, H, W, t, integrate=True):
             + 7.571 * z**7.15 / (1 + 5.135 * z**12.9)
             - 8.07 * z**7.31 / (1 + 5.583 * z**12.23)
         )
-        * 0.435  # 0.4530 in paper, 0.435 in FORTAN
+        * 0.4530  # 0.4530 in paper, 0.435 in FORTAN
         * (Y / 10) ** 1.26
         / (1 + 0.03096 * (Y / 10) ** 3.12)
         * (1 - 0.000019 * tau**8 / (1 + 0.000019 * tau**8))
@@ -664,7 +594,7 @@ def _Q(GR, H, W, t, integrate=True):
     )
 
     g = (
-        10 + (77.58 - 64.99 * tau**0.125 / (1 + 0.04348 * tau**5)) * s
+        10 + (77.58 - 64.99 * tau**0.125 / (1 + 0.04348 * tau**0.5)) * s
     )  # early time decay power
 
     h = (
@@ -714,14 +644,13 @@ def _Q(GR, H, W, t, integrate=True):
         """
 
         b = (f * (tau / sigma) ** g + (1 - f) * (tau / sigma) ** h) * (
-            1 - (sigma - tau) / D_u
+            1 - (sigma - tau) / sD_u
         )
 
         if X >= Xm and Y <= 380:
             j = min(
                 11860 * (sigma - tau) / (Y * (X - Xm) ** 1.25), 200
             )  # ratio of time after TOA to time to second peak after TOA,
-            # this absolute operation around X-Xm is inferred.
 
             v = v0 * j**3 / (6.13 + j**3) + 1
 
@@ -733,10 +662,11 @@ def _Q(GR, H, W, t, integrate=True):
                 )
                 * (c2 + (1 - c2) * (1 - 0.09 * K**2.5 / (1 + 0.09 * K**2.5)))
                 * c3
-                * (1 - ((sigma - tau) / D_u) ** 8)
+                * (1 - ((sigma - tau) / sD_u) ** 8)
             )  # this is harder to split into time and non-time dependent part and left as is
 
             ratio = (1 + a) * (b * v + c)
+
         else:
             ratio = b
 
@@ -755,7 +685,7 @@ def _Q(GR, H, W, t, integrate=True):
 
     sigma = t / m  # sigma is the scaled time in ms/kT^(1/3)
     start = tau
-    end = tau + D_u / m
+    end = tau + sD_u
 
     if start - sigma > 1e-9:
         raise ValueError(

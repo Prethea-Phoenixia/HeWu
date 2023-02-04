@@ -91,7 +91,7 @@ def intg(f, l, u, tol=1e-3):
         I = I1
         k += 1
 
-        if d < tol * (abs(I) + 1):
+        if d < tol * (abs(I) + tol):
             c += 1
         else:
             c = 0

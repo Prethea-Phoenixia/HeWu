@@ -65,8 +65,8 @@ def _DeltaP_s_to_r(r):
     """
     return (
         2 / r
-        + 3 / r**1.5
-        + 1.6 / r**3 * (1 + 105 * (10 * r) ** 4 / (1 + 12920 * (10 * r) ** 8))
+        + 3 / r ** 1.5
+        + 1.6 / r ** 3 * (1 + 105 * (10 * r) ** 4 / (1 + 12920 * (10 * r) ** 8))
     )  # Eqn. (33)
 
 
@@ -93,8 +93,8 @@ def _r(DeltaP_s):
     """
     _pi = DeltaP_s / 1000
 
-    return 2.463 / (DeltaP_s**0.9846) + 1.176 / (DeltaP_s ** (1 / 3)) * (
-        1 + 0.0004726 * _pi**1.5 / (1 + 2.952e-6 * _pi**3)
+    return 2.463 / (DeltaP_s ** 0.9846) + 1.176 / (DeltaP_s ** (1 / 3)) * (
+        1 + 0.0004726 * _pi ** 1.5 / (1 + 2.952e-6 * _pi ** 3)
     )  # Eqn. (36)
 
 
@@ -118,10 +118,10 @@ def _DeltaP_s_to_tau(tau):
     "
     """
 
-    return (7000 + 5.18 * tau**0.75) / (
-        0.007643 + tau**1.1334
-    ) + 7.11e8 * tau**2.973 / (
-        1 + 430800 * tau**4.656 + 3052e3 * tau**6.535
+    return (7000 + 5.18 * tau ** 0.75) / (
+        0.007643 + tau ** 1.1334
+    ) + 7.11e8 * tau ** 2.973 / (
+        1 + 430800 * tau ** 4.656 + 3052e3 * tau ** 6.535
     )  # Eqn. (37)
 
 
@@ -150,7 +150,7 @@ def _tau_to_DeltaP_s(DeltaP_s):
 
     """
 
-    return 0.03394 + 893 / DeltaP_s**0.80424 + 2015 / DeltaP_s  # Eqn.(39)
+    return 0.03394 + 893 / DeltaP_s ** 0.80424 + 2015 / DeltaP_s  # Eqn.(39)
 
 
 def _tau_to_r(r):
@@ -169,8 +169,8 @@ def _tau_to_r(r):
     "
     """
 
-    return (0.54291 - 21.185 * r + 361.8 * r**2 + 2383 * r**3) / (
-        1 + 2.048 * r + 2.6872 * r**2
+    return (0.54291 - 21.185 * r + 361.8 * r ** 2 + 2383 * r ** 3) / (
+        1 + 2.048 * r + 2.6872 * r ** 2
     )  # Eqn. (40), scaled
 
 
@@ -199,9 +199,9 @@ def _ci_tau_to_r(r):
     "
     """
 
-    a = (0.543 - 21.8 * r + 386 * r**2 + 2383 * r**3) * r**8
-    b = (2.99e-8 - 1.91e-4 * r**2 + 1.032 * r**4 - 4.43 * r**6) * 1e-6
-    c = (1.028 + 2.087 * r + 2.69 * r**2) * r**8
+    a = (0.543 - 21.8 * r + 386 * r ** 2 + 2383 * r ** 3) * r ** 8
+    b = (2.99e-8 - 1.91e-4 * r ** 2 + 1.032 * r ** 4 - 4.43 * r ** 6) * 1e-6
+    c = (1.028 + 2.087 * r + 2.69 * r ** 2) * r ** 8
 
     return a / (b + c)  # Eqn.(41)
 
@@ -223,7 +223,7 @@ def _s_D_p_pos_to_tau(tau):
     "
     """
 
-    return (813140 + 11412 * tau + 313 * tau**2) / (6780 + 444.7 * tau + tau**2)
+    return (813140 + 11412 * tau + 313 * tau ** 2) / (6780 + 444.7 * tau + tau ** 2)
 
 
 def _s_D_p_pos_to_DeltaP_s(DeltaP_s):
@@ -255,8 +255,8 @@ def _s_D_p_pos_to_DeltaP_s(DeltaP_s):
 
     return (
         -148.6
-        + 497.3 / (1 + 18.68 * _pi**0.6783)
-        + 1629 * _pi**0.8711 / (1 + 6.477 * _pi**0.8555)
+        + 497.3 / (1 + 18.68 * _pi ** 0.6783)
+        + 1629 * _pi ** 0.8711 / (1 + 6.477 * _pi ** 0.8555)
     )  # Eqn.(45), in scaled
 
 
@@ -281,8 +281,8 @@ def _s_D_p_pos_to_r(r):
     """
     return (
         69.12
-        + 46.19 / (1 + 3e6 * r**7.217)
-        + 4043 * r**6.329 / (1 + 37.16 * r**5.621)
+        + 46.19 / (1 + 3e6 * r ** 7.217)
+        + 4043 * r ** 6.329 / (1 + 37.16 * r ** 5.621)
     )  # Eqn.(46), in scaled
 
 
@@ -310,7 +310,7 @@ def _s_I_p_pos(DeltaP_s):
     """
 
     return (
-        145 * DeltaP_s**0.5 / (1 + 0.00385 * DeltaP_s**0.5)
+        145 * DeltaP_s ** 0.5 / (1 + 0.00385 * DeltaP_s ** 0.5)
     )  # Eqn. (48) in scaled formulation
 
 
@@ -346,8 +346,8 @@ def _DeltaP(t, tau, m, s_D_p_pos=None):
             0.417
             + 0.583
             * (tau / sigma) ** 6
-            * (40 * (tau / sigma) ** 6 + tau**2)
-            / (40 + tau**2)
+            * (40 * (tau / sigma) ** 6 + tau ** 2)
+            / (40 + tau ** 2)
         )
         * (1 - (sigma - tau) / s_D_p_pos)
     )  # in Eqn.(49)
@@ -383,8 +383,8 @@ def _s_D_u_pos(DeltaP_s):
     _pi = DeltaP_s / 1000  # ksi
 
     return (
-        317 / (1 + 85 * _pi + 7500 * _pi**2)
-        + 6100 * _pi / (1 + 420 * _pi**2)
+        317 / (1 + 85 * _pi + 7500 * _pi ** 2)
+        + 6100 * _pi / (1 + 420 * _pi ** 2)
         + 2113 * _pi / (1 + 11 * _pi)
     )  # Eqn. (52)
 
@@ -406,7 +406,7 @@ def _s_I_u_pos_to_DeltaP_s(DeltaP_s):
     "
     """
 
-    return 2.14 * DeltaP_s**1.637 / (1 + 0.00434 * DeltaP_s**1.431)  # Eqn. (54)
+    return 2.14 * DeltaP_s ** 1.637 / (1 + 0.00434 * DeltaP_s ** 1.431)  # Eqn. (54)
 
 
 def _s_I_u_pos_to_r(r):
@@ -431,13 +431,13 @@ def _s_I_u_pos_to_r(r):
     """
 
     return (
-        18.8 * r**2 / (1e-6 + 0.06896 * r**3 + 0.5963 * r**5.652)
+        18.8 * r ** 2 / (1e-6 + 0.06896 * r ** 3 + 0.5963 * r ** 5.652)
         + 92.64 / (100 * r) ** 5
         + 2935
         * (r - 0.00597)
         * (0.01 - r)
-        * (0.0003552 - r**4)
-        / (1e-10 + 0.003377 * r**2.5 + 155.8 * r**8)
+        * (0.0003552 - r ** 4)
+        / (1e-10 + 0.003377 * r ** 2.5 + 155.8 * r ** 8)
     )  # Eqn.(55)
 
 
@@ -461,15 +461,15 @@ def _Q_s_over_Delta_P_s(DeltaP_s):
 
     return (
         _pi
-        * (1 + 0.241 * _pi + 0.4376 * _pi**2)
-        / (0.041 + 0.4 * _pi + 0.02891 * _pi**2 + 0.1015 * _pi**3)
-        + 0.01251 * _pi**2 / (1 + 9.649e-7 * _pi**5)
-        + 7.29e-8 * _pi**4 / (1 + 2.61e-21 * _pi**12)
-        + 9.763e-10 * _pi**4 / (1 + 6.957e-28 * _pi**12)
-        - 5.052e-8 * _pi**6 / (1 + 1.368e-14 * _pi**12)
-        - 6.021e5 * zeta**6 / (1 + 3.541e12 * zeta**12)
-        - 2.17e8 * zeta**14 / (1 + 1.62e9 * zeta**15)
-        - 0.7670 * zeta**2.839 / (1 + 0.1646 * zeta**3.678)
+        * (1 + 0.241 * _pi + 0.4376 * _pi ** 2)
+        / (0.041 + 0.4 * _pi + 0.02891 * _pi ** 2 + 0.1015 * _pi ** 3)
+        + 0.01251 * _pi ** 2 / (1 + 9.649e-7 * _pi ** 5)
+        + 7.29e-8 * _pi ** 4 / (1 + 2.61e-21 * _pi ** 12)
+        + 9.763e-10 * _pi ** 4 / (1 + 6.957e-28 * _pi ** 12)
+        - 5.052e-8 * _pi ** 6 / (1 + 1.368e-14 * _pi ** 12)
+        - 6.021e5 * zeta ** 6 / (1 + 3.541e12 * zeta ** 12)
+        - 2.17e8 * zeta ** 14 / (1 + 1.62e9 * zeta ** 15)
+        - 0.7670 * zeta ** 2.839 / (1 + 0.1646 * zeta ** 3.678)
     )  # Eqn.(18)
 
 
@@ -507,11 +507,11 @@ def _Q(t, tau, m, DeltaP_s=None, Q_s=None, D_u_pos=None):
 
     w = (t - T) / D_u_pos
 
-    d = 1.06 * _pi**0.035 / (1 + 147 * _pi**3) + 2.13 * _pi**3 / (
-        1 + 67.9 * _pi**3.5
+    d = 1.06 * _pi ** 0.035 / (1 + 147 * _pi ** 3) + 2.13 * _pi ** 3 / (
+        1 + 67.9 * _pi ** 3.5
     )
-    a = 0.38 * DeltaP_s**0.8605
-    b = 5.4 * DeltaP_s**0.604
+    a = 0.38 * DeltaP_s ** 0.8605
+    b = 5.4 * DeltaP_s ** 0.604
 
     return Q_s * (1 - w) ** 2 * (d * exp(-a * w) + (1 - d) * exp(-b * w))  # Eqn.(56)
 
@@ -549,14 +549,14 @@ def _theta_and_t_m(DeltaP_s):
 
     _pi = DeltaP_s / 1000  # in ksi
 
-    theta_m = 1090 * _pi**3.26 / (1 + 35.6 * _pi**2.75)  # Eqs. (59)
+    theta_m = 1090 * _pi ** 3.26 / (1 + 35.6 * _pi ** 2.75)  # Eqs. (59)
     # this formulation works at high pressure, drops off too low at lower ones
 
     theta_s = (
         5.310
         * _pi
         * (1 + 34 * _pi)
-        / (1 + 58.3 * _pi + 6.53 * _pi**3.5 / (1 + 0.2027 * _pi**2))
+        / (1 + 58.3 * _pi + 6.53 * _pi ** 3.5 / (1 + 0.2027 * _pi ** 2))
     )  # Eqs. (23) modified by dividing by 1000
     # this formulation works at lower pressure, drops off too low at high pressure
 
@@ -582,20 +582,20 @@ def _DeltaP_neg(t, m, DeltaP_s, D_p_neg):
     """
 
     t_n = (
-        151.4 + 2844 / DeltaP_s**0.9638
+        151.4 + 2844 / DeltaP_s ** 0.9638
     ) * m  #  time of beginning of negative phase
 
     An = 0.2532 * DeltaP_s / (1 + 0.1262 * DeltaP_s) + 413.2 * (DeltaP_s / 100) ** 4 / (
         1 + 668.1 * (DeltaP_s / 100) ** 5
     )
-    Bn = 2.481 * DeltaP_s / (1 + 0.004272 * DeltaP_s**1.7)
+    Bn = 2.481 * DeltaP_s / (1 + 0.004272 * DeltaP_s ** 1.7)
     Cn = 18.55 * (DeltaP_s / 100) ** 8 / (1 + 2.75 * (DeltaP_s / 100) ** 7.335)
 
     tau = (t - t_n) / D_p_neg
 
     Po = 14.7  # we use a fixed value for the ambient here
 
-    return -Po * An * tau * (1 - tau) / (1 + Bn * tau**2 + Cn * tau**3)
+    return -Po * An * tau * (1 - tau) / (1 + Bn * tau ** 2 + Cn * tau ** 3)
 
 
 def freeair(R, Y, t=None, prettyPrint=True):

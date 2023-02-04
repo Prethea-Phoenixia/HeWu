@@ -4,7 +4,7 @@ from math import floor
 import matplotlib as mpt
 from matplotlib import ticker
 import matplotlib.pyplot as plt
-from HeWu.modelBrode1987 import airburst
+from HeWu.modelBrode1987Airburst import airburst
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import matplotlib.patches as patches
 from math import sqrt, log, log10

@@ -166,24 +166,26 @@ def runABtest(airburst_to_op):
         sgr_ft, sbh_ft, sigma_tau, op_psi = testPoint
         op_pa = _uc_psi2pa(op_psi)
         Y = randint(1, 25000)  # 1kt to 25Mt
-        Y = 1
-        Y3 = Y ** (1 / 3)
 
-        sgr_m = _uc_ft2m(sgr_ft)
-        sbh_m = _uc_ft2m(sbh_ft)
+        for Y in (1, 100):
+            Y3 = Y ** (1 / 3)
 
-        gr_m = sgr_m * Y3
-        hob_m = sbh_m * Y3
+            sgr_m = _uc_ft2m(sgr_ft)
+            sbh_m = _uc_ft2m(sbh_ft)
 
-        time_elapsed = sigma_tau * Y3 / 1000  # ms -> s
+            gr_m = sgr_m * Y3
+            hob_m = sbh_m * Y3
 
-        dp = airburst_to_op(gr_m, hob_m, Y, time_elapsed)
-        delta = (dp - op_pa) / op_pa
-        print(
-            "{:^10d}|{:^10.3g},{:^10.3g},{:^10.3g}|{:^10.3g}-{:^10.3g}:{:^15.1%}".format(
-                Y, sgr_m, sbh_m, sigma_tau, op_pa, dp, delta
+            time_elapsed = sigma_tau * Y3 / 1000  # ms -> s
+
+            dp = airburst_to_op(gr_m, hob_m, Y, time_elapsed)
+            delta = (dp - op_pa) / op_pa
+            print(
+                "{:^10}|{:^10.3g},{:^10.3g},{:^10.3g}|{:^10.3g}-{:^10.3g}:{:^15.1%}".format(
+                    Y, sgr_m, sbh_m, sigma_tau, op_pa, dp, delta
+                )
             )
-        )
+        print()
 
 
 def runFAtest(freeair_from_r):
@@ -284,3 +286,4 @@ def runFAtest(freeair_from_r):
                 delta7,
             )
         )
+        print()
