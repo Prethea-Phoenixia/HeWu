@@ -53,20 +53,7 @@ def intg(f, l, u, tol=1e-3):
     tolerance before submitting the result as a good enough estimate for the integral.
 
     Since specifying a relative error does not work well for values extremely close to 0.
-    Instead we define a error as abs(x_true - x_ref) / (1 + abs(x_ref)) x 100%.
-    For example, a 1% (0.01) relative error would translate to
-
-    reference value    acceptable range
-    10                  10.11 - 9.89
-    1                    0.98 - 1.02
-    0.1                 0.089 - 0.111
-    0                   -0.01 - 0.01
-
-    as can be seen, as the reference value approach 0, the absolute acceptable error approaches
-    the tolerance specified. On the otherhand as the reference value approach infinite, the
-    absolute error approaches the product of the specified tolerance and the reference value,
-    closer to the traditional definition of relative error.
-
+    Instead we define a error as abs(x_true - x_ref) / (tolerance + abs(x_ref)) x 100%
     """
 
     a = (u - l) / 2

@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="HeWu",
-    version="2023.1.19",
+    version="2023.2.4",
     description="Nuclear Weapon Effects Modeling in Python",
     url="https://github.com/Prethea-Phoenixia/HeWu",
     author="Zhai Jinpeng",

@@ -141,8 +141,8 @@ def runABtest(airburst_to_op):
             "g.r.",
             "h.o.b",
             "sigma-tau",
-            "Δp (ref)",
             "Δp (calc)",
+            "Δp (ref)",
             "Δ",
         )
     )
@@ -150,7 +150,7 @@ def runABtest(airburst_to_op):
         "{:^10}|{:^10},{:^10},{:^10}|{:^10}-{:^10}:{:^10}".format(
             "kT",
             "m/kT^\u2153",
-            "m/kT^\u2153",  # this blood thing -> ⅓
+            "m/kT^\u2153",  # this bloody thing -> ⅓
             "ms/kT^\u2153",
             "Pa",
             "Pa",
@@ -166,26 +166,23 @@ def runABtest(airburst_to_op):
         sgr_ft, sbh_ft, sigma_tau, op_psi = testPoint
         op_pa = _uc_psi2pa(op_psi)
         Y = randint(1, 25000)  # 1kt to 25Mt
+        Y3 = Y ** (1 / 3)
 
-        for Y in (1, 100):
-            Y3 = Y ** (1 / 3)
+        sgr_m = _uc_ft2m(sgr_ft)
+        sbh_m = _uc_ft2m(sbh_ft)
 
-            sgr_m = _uc_ft2m(sgr_ft)
-            sbh_m = _uc_ft2m(sbh_ft)
+        gr_m = sgr_m * Y3
+        hob_m = sbh_m * Y3
 
-            gr_m = sgr_m * Y3
-            hob_m = sbh_m * Y3
+        time_elapsed = sigma_tau * Y3 / 1000  # ms -> s
 
-            time_elapsed = sigma_tau * Y3 / 1000  # ms -> s
-
-            dp = airburst_to_op(gr_m, hob_m, Y, time_elapsed)
-            delta = (dp - op_pa) / op_pa
-            print(
-                "{:^10}|{:^10.3g},{:^10.3g},{:^10.3g}|{:^10.3g}-{:^10.3g}:{:^15.1%}".format(
-                    Y, sgr_m, sbh_m, sigma_tau, op_pa, dp, delta
-                )
+        dp = airburst_to_op(gr_m, hob_m, Y, time_elapsed)
+        delta = (dp - op_pa) / op_pa
+        print(
+            "{:^10}|{:^10.3g},{:^10.3g},{:^10.3g}|{:^10.3g}-{:^10.3g}:{:^15.1%}".format(
+                Y, sgr_m, sbh_m, sigma_tau, dp, op_pa, delta
             )
-        print()
+        )
 
 
 def runFAtest(freeair_from_r):
@@ -286,4 +283,8 @@ def runFAtest(freeair_from_r):
                 delta7,
             )
         )
-        print()
+        print(
+            "{:-^12}+{:-^12}+{:-^12}+{:-^12}+{:-^12}+{:-^12}+{:-^12}+{:-^12}".format(
+                "", "", "", "", "", "", "", ""
+            )
+        )

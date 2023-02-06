@@ -12,7 +12,8 @@ CONTRACT No. DNA 001-85-C-0089
 This section mainly reflects equation from section IV, falling back to using the 
 equations in III when in the free-air region.
 
-
+# comments:
+# In general, capital X, Y are in ft/kT^(1/3), while lower case x, y are in kft/kT^(1/3)
 """
 from math import log10, exp
 from HeWu.uc import _uc_m2ft, _uc_psi2pa, _uc_ft2m
@@ -27,11 +28,10 @@ def _DeltaP_s(GR, H, W):
     GR: ground range, in ft
     H: height, in ft
     W: yield, kT
-
     """
     m = W ** (1 / 3)
 
-    z = H / GR
+    z = H / GR  # in lower case, however is unitless
 
     a = 1.22 - 3.908 * z**2 / (1 + 810.2 * z**5)
     b = (
@@ -56,7 +56,20 @@ def _DeltaP_s(GR, H, W):
     x = GR / m / 1000
     y = H / m / 1000
 
+    # Y = 1000 y
+
     r = (x**2 + y**2) ** 0.5
+    """
+    bb = (
+        0.0629
+        * (z**-8.34)
+        / (1 + 0.00509 * (z**-13.05))
+        * 50
+        * y
+        / (1 + 2.56e7 * (y**5))
+    ) # slightly early FORTRAN version.
+
+    """
 
     h = (
         8.808 * z**1.5 / (1 + 154.5 * z**3.5)
@@ -69,7 +82,15 @@ def _DeltaP_s(GR, H, W):
 
     j = 0.000629 * y**4 / (3.493e-9 + y**4) - 2.67 * y**2 / (1 + 1e7 * y**4.3)
     k = 5.18 + 0.2803 * y**3.5 / (3.788e-6 + y * 4)
-    DeltaP_s = 10.47 / r**a + b / r**c + d * e / (1 + f * r**g) + h + j / r**k
+
+    DeltaP_s = (
+        10.47 / r**a + b / r**c + d * e / (1 + f * r**g) + h + j / r**k
+    )  # Eqn.62
+    """
+    DeltaP_s = (
+        10.47 / r**a + (b - bb) / r**c + d * e / (1 + f * r**g) + h + j / r**k
+    )  # FORTRAN version, probably slightly earlier
+    """
 
     return DeltaP_s
 
@@ -147,15 +168,15 @@ def _tau(GR, H, W, Xm=None):
     Xm: optional, when supplied skips the call to _Xm
     """
     m = W ** (1 / 3)
-    x = GR / m  # ft/kT^(1/3)
-    y = H / m  # ft/kT^(1/3)
+    X = GR / m  # ft/kT^(1/3)
+    Y = H / m  # ft/kT^(1/3)
 
     if Xm is None:
         Xm = _Xm(GR, H, W)
 
-    rm = (Xm**2 + y**2) ** 0.5 / 1000
-    r = (x**2 + y**2) ** 0.5 / 1000
-    if x <= Xm:
+    rm = (Xm**2 + Y**2) ** 0.5 / 1000
+    r = (X**2 + Y**2) ** 0.5 / 1000
+    if X <= Xm:
         tau = _u(r)
     else:
         tau = _u(rm) + _w(r) - _w(rm)
@@ -296,6 +317,8 @@ def _DeltaP(GR, H, W, t, integrate=True):
         integrate = True:
             overpressure in psi, overpressure impulse in psi-ms
 
+    Eqn. 63 and its integral
+
     """
     m = W ** (1 / 3)
     X = GR / m  # ft/kT^(1/3)
@@ -380,7 +403,6 @@ def _DeltaP(GR, H, W, t, integrate=True):
         - (0.452 - 9.94e-7 * X**4.13 / (1 + 2.1868e-6 * X**4.13))
         * (1 - 1.5397e-4 * Y**4.3 / (1 + 1.5397e-4 * Y**4.3))
     )
-
     g = (
         10 + (77.58 - 64.99 * tau**0.125 / (1 + 0.04348 * tau**0.5)) * s
     )  # early time decay power, tau raised to 0.5 in work, 5 in FORTRAN
@@ -397,7 +419,6 @@ def _DeltaP(GR, H, W, t, integrate=True):
         * s
         - 0.1966 * tau**1.22 / (1 + 0.767 * tau**1.22)
     )
-
     # supporting values for calculatng c. Time-independent
 
     c2 = 23000 * (Y / 100) ** 9 / (1 + 23000 * (Y / 100) ** 9)
@@ -447,15 +468,16 @@ def _DeltaP(GR, H, W, t, integrate=True):
                 * c3
                 * (1 - ((sigma - tau) / sd) ** 8)
             )  # this is harder to split into time and non-time dependent part and left as is
-
+            print(b, f)
+            print(s, f2, f)
             return (1 + a) * (b * v + c)
+
         else:
+            # print(b)
             return b
 
     DeltaP_s = _DeltaP_s(GR, H, W)
-
     sigma = t / m  # sigma is the scaled time in ms/kT^(1/3)
-
     start = tau
     end = tau + sd
 
@@ -684,6 +706,7 @@ def _Q(GR, H, W, t, integrate=True):
             )
 
     sigma = t / m  # sigma is the scaled time in ms/kT^(1/3)
+    print(sigma)
     start = tau
     end = tau + sD_u
 
@@ -977,9 +1000,21 @@ if __name__ == "__main__":
     by default, runs a test
     """
     from HeWu.test import runABtest
+    from uc import _uc_m2ft, _uc_psi2pa
 
     def _airburst_to_op(gr, h, Y, t):
-        _, _, _, _, _, p, _, _, _, _, _, _, _, _ = airburst(gr, h, Y, t, False)
+        gr = max(gr, 1e-9)
+        h = max(h, 1e-9)
+        p = _uc_psi2pa(
+            _DeltaP(
+                _uc_m2ft(gr),
+                _uc_m2ft(h),
+                Y,
+                t * 1000 + _tau(_uc_m2ft(gr), _uc_m2ft(h), Y) * Y ** (1 / 3),
+                integrate=False,
+            )
+        )
+        # _, _, _, _, _, p, _, _, _, _, _, _, _, _ = airburst(gr, h, Y, t, False)
         return p
 
     runABtest(_airburst_to_op)
