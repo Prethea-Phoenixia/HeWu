@@ -2,12 +2,17 @@
 Zhai Jinpeng, 翟锦鹏, 2023
 Contact: 914962409@qq.com
 
-implements the code in Appendix B from the book:
+implements the FORTRAN code listing in Appendix B from the book in Python form:
 PSR Report 1419-3
 "AIRBLAST FROM NUCLEAR BURSTS—ANALYTIC APPROXIMATIONS"
 Harold L. Brode, July 1987
 Technical Report
 CONTRACT No. DNA 001-85-C-0089  
+
+This is provided as a sanity check against the datapoints given in Appendix A, 
+used for code checking for the actual model. According to the comment present
+in the code listings, this is perhaps an older model, as the result is slightly
+more deviant than the actually described model (see modelBrode1987Airburst.py).
 
 """
 
@@ -214,7 +219,6 @@ def PT(Y, X, SIGMA, DELTAP=None):
     )
     if X < XM or Y > 380:
         DELTAP = DELTPS * B
-        # print(B)
     else:
         XE = 3.039 * Y / (1 + 0.0067 * Y)
         AK = abs((X - XM) / (XE - XM))
@@ -257,8 +261,6 @@ def PT(Y, X, SIGMA, DELTAP=None):
         )
 
         DELTAP = DELTPS * (1 + A) * (B * V + C)
-        print(B, F)
-        print(S, F2, F)
     return DELTAP
 
 

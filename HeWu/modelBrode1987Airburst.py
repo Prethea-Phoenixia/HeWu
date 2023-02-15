@@ -468,12 +468,9 @@ def _DeltaP(GR, H, W, t, integrate=True):
                 * c3
                 * (1 - ((sigma - tau) / sd) ** 8)
             )  # this is harder to split into time and non-time dependent part and left as is
-            print(b, f)
-            print(s, f2, f)
             return (1 + a) * (b * v + c)
 
         else:
-            # print(b)
             return b
 
     DeltaP_s = _DeltaP_s(GR, H, W)
