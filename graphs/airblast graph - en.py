@@ -68,19 +68,16 @@ for gr in x:
 
         T[j][i] = t
 
+        """
         if ipi < 1:
             ipi = 1
-
         if iqi < 1:
             iqi = 1
+        """
 
-        # IP[j][i] = ipi
-        IP[j][i] = min(ipi, ipe)
+        IP[j][i] = ipi
         DPP[j][i] = dpp
-        if iqe is not None:
-            IQ[j][i] = min(iqi, iqe)
-        else:
-            IQ[j][i] = iqi
+        IQ[j][i] = iqi
         DPQ[j][i] = dpq
 
         j += 1

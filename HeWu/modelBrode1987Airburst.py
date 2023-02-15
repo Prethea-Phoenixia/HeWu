@@ -91,7 +91,6 @@ def _DeltaP_s(GR, H, W):
         10.47 / r**a + (b - bb) / r**c + d * e / (1 + f * r**g) + h + j / r**k
     )  # FORTRAN version, probably slightly earlier
     """
-
     return DeltaP_s
 
 
@@ -289,7 +288,7 @@ def _D_u(GR, H, W, D=None, Xm=None, DeltaP_s=None, tau=None):
         return C * D
 
 
-def _DeltaP(GR, H, W, t, integrate=True):
+def _DeltaP(GR, H, W, t, integrate=True, DeltaP_s=None):
     """
     Overpressure over time in psi.
     Optionally, integrates it from arrival time to specified time.
@@ -473,7 +472,9 @@ def _DeltaP(GR, H, W, t, integrate=True):
         else:
             return b
 
-    DeltaP_s = _DeltaP_s(GR, H, W)
+    if DeltaP_s is None:
+        DeltaP_s = _DeltaP_s(GR, H, W)
+
     sigma = t / m  # sigma is the scaled time in ms/kT^(1/3)
     start = tau
     end = tau + sd
@@ -504,7 +505,7 @@ def _DeltaP(GR, H, W, t, integrate=True):
         return DeltaP_s * atSigma(sigma)
 
 
-def _Q(GR, H, W, t, integrate=True):
+def _Q(GR, H, W, t, integrate=True, DeltaP_s=None):
     """
     Overpressure or dynamic pressure horizontal component over time in psi.
     Optionally, integrates it from arrival time to specified time.
@@ -571,7 +572,8 @@ def _Q(GR, H, W, t, integrate=True):
 
     tau = _tau(GR, H, W, Xm)
 
-    DeltaP_s = _DeltaP_s(GR, H, W)
+    if DeltaP_s is None:
+        DeltaP_s = _DeltaP_s(GR, H, W)
 
     sD_u = _D_u(GR, H, W, None, Xm, DeltaP_s, tau) / m  # scaled time
 
@@ -703,7 +705,6 @@ def _Q(GR, H, W, t, integrate=True):
             )
 
     sigma = t / m  # sigma is the scaled time in ms/kT^(1/3)
-    print(sigma)
     start = tau
     end = tau + sD_u
 
@@ -821,6 +822,8 @@ def _I_p_pos(GR, H, W, DeltaP_s=None, Xm=None):
     H: height of burst, feet
     W: yield, kiloton
 
+        "This form is good to better than 10 percent for 2 < DeltaP_s < 100,000 psi"
+
     """
     m = W ** (1 / 3)
     X = GR / m  # ft/kT^(1/3)
@@ -893,8 +896,8 @@ def airburst(GR_m, H_m, W, t=None, prettyPrint=True):
     DPP = D / 1000  # ms to s
     DPQ = D_u / 1000  # ms to s
 
-    p, I_p_pos = _DeltaP(GR, H, W, (tau * m + D), integrate=True)
-    q, I_u_pos = _Q(GR, H, W, (tau * m + D_u), integrate=True)
+    p, I_p_pos = _DeltaP(GR, H, W, (tau * m + D), True, DeltaP_s)
+    q, I_u_pos = _Q(GR, H, W, (tau * m + D_u), True, DeltaP_s)
 
     I_p_est = _I_p_pos(GR, H, W, DeltaP_s, Xm)
     I_u_est = _I_u_pos(GR, H, W, DeltaP_s)
@@ -929,19 +932,16 @@ def airburst(GR_m, H_m, W, t=None, prettyPrint=True):
 
     if prettyPrint:
         print("{:^49}".format("INPUT"))
-        print("Ground Range:\n{:.>20,.6g} m".format(GR_m))
-        print("Burst Height:\n{:.>20,.6g} m".format(H_m))
-        print("Yield:\n{:.>20,.6g} kT".format(W))
-        print("")
+        print("Ground Range:{:.>9,.6g} m Burst Height:{:.>8,.6g} m".format(GR_m, H_m))
         print(
-            "Time To:\n{:.>20} s".format(
-                "######" if t is None else "{:,.6g}".format(t + TAAIR)
+            "Yield:{:.>15,.6g} kT Time To:{:.>13} s".format(
+                W, "######" if t is None else "{:,.6g}".format(t + TAAIR)
             )
         )
         print("")
         print("{:^49}".format("OUTPUT"))
-        print("Time of Arrival:\n{:.>20,.6g} s".format(TAAIR))
-        print("Range Onset of Mach Stem:\n{:.>20,.6g} m".format(XM))
+        print("Time of Arrival:{:.>30,.6g} s".format(TAAIR))
+        print("Range Onset of Mach Stem:{:.>21,.6g} m".format(XM))
         print("")
         print("{:>24}{:>24} ".format("Overpressure", "Dyn.Pres.Hz.Comp."))
         print("{:<24}{:<24} ".format("Peak:", ""))
@@ -949,9 +949,9 @@ def airburst(GR_m, H_m, W, t=None, prettyPrint=True):
         print("{:<24}{:<24} ".format("Duration:", ""))
         print("{:.>22,.6g} s{:.>22,.6g} s ".format(DPP, DPQ))
         print("{:<24}{:<24} ".format("Impulse:", ""))
-        print(".integral.{:.>9,.6g} Pa-s{:.>19,.6g} Pa-s".format(IPTOTAL, IQTOTAL))
+        print(".int.{:.>14,.6g} Pa-s{:.>19,.6g} Pa-s".format(IPTOTAL, IQTOTAL))
         print(
-            ".estimate.{:.>9,.6g} Pa-s{:.>19} Pa-s".format(
+            ".est.{:.>14,.6g} Pa-s{:.>19} Pa-s".format(
                 IPEST, "######" if IQEST is None else "{:,.6g}".format(IQEST)
             )
         )
@@ -1015,3 +1015,5 @@ if __name__ == "__main__":
         return p
 
     runABtest(_airburst_to_op)
+
+    print(airburst(1, 1, 1))
