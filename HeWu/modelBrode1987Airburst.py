@@ -21,17 +21,15 @@ from HeWu.uc import _uc_m2ft, _uc_psi2pa, _uc_ft2m
 from HeWu.intg import intg
 
 
-def _DeltaP_s(GR, H, W):
+def _DeltaP_s(x, y):
     """
     Peak overpressure in psi
 
-    GR: ground range, in ft
-    H: height, in ft
-    W: yield, kT
+    x: scaled ground range, kft/kT^(1/3)
+    y: scaled burst height, kft/kT^(1/3)
     """
-    m = W ** (1 / 3)
 
-    z = H / GR  # in lower case, however is unitless
+    z = y / x  # in lower case, however is unitless
 
     a = 1.22 - 3.908 * z**2 / (1 + 810.2 * z**5)
     b = (
@@ -51,26 +49,12 @@ def _DeltaP_s(GR, H, W):
     )
     g = 1.83 + 5.361 * z**2 / (1 + 0.3139 * z**6)
 
-    # In-text version
-
+    """
     x = GR / m / 1000
     y = H / m / 1000
-
-    # Y = 1000 y
+    """
 
     r = (x**2 + y**2) ** 0.5
-    """
-    bb = (
-        0.0629
-        * (z**-8.34)
-        / (1 + 0.00509 * (z**-13.05))
-        * 50
-        * y
-        / (1 + 2.56e7 * (y**5))
-    ) # slightly early FORTRAN version.
-
-    """
-
     h = (
         8.808 * z**1.5 / (1 + 154.5 * z**3.5)
         - (0.2905 + 64.67 * z**5) / (1 + 441.5 * z**5)
@@ -86,11 +70,7 @@ def _DeltaP_s(GR, H, W):
     DeltaP_s = (
         10.47 / r**a + b / r**c + d * e / (1 + f * r**g) + h + j / r**k
     )  # Eqn.62
-    """
-    DeltaP_s = (
-        10.47 / r**a + (b - bb) / r**c + d * e / (1 + f * r**g) + h + j / r**k
-    )  # FORTRAN version, probably slightly earlier
-    """
+
     return DeltaP_s
 
 
@@ -131,7 +111,7 @@ def _w(r):
     )
 
 
-def _Xm(GR, H, W):
+def _Xm(X, Y):
     """
     scaled range at which Mach reflection begins for a given burst height,
     onset of Mach reflection locus,in ft per kT**(1/3)   
@@ -144,34 +124,21 @@ def _Xm(GR, H, W):
     reg.ref.region | mach reflection region
                    Xm
 
-    GR: ground range in feet
-    H: height of burst in feet
-    W: yield in kiloton
+    X: scaled ground range in ft/kT^(1/3)
+    Y: scaled ground range in ft/kT^(1/3)
     """
-    m = W ** (1 / 3)
-    X = GR / m  # ft/kT^(1/3)
-    Y = H / m  # ft/kT^(1/3)
 
     Xm = 170 * Y / (1 + 60 * Y**0.25) + 2.89 * (Y / 100) ** 2.5
     return Xm
 
 
-def _tau(GR, H, W, Xm=None):
+def _tau(X, Y, Xm):
     """
-    scaled time of arrival for GR and H, in ms/kT^(1/3), based on Eq. (41).
+    scaled time of arrival for GR and H, in ms/kT^(1/3), based on Eq. (41)
+    X: scaled ground range in ft/kT^(1/3)
+    Y: scaled ground range in ft/kT^(1/3)
 
-    GR: ground range in feet
-    H: height of burst in feet
-    W: yield in kiloton
-
-    Xm: optional, when supplied skips the call to _Xm
     """
-    m = W ** (1 / 3)
-    X = GR / m  # ft/kT^(1/3)
-    Y = H / m  # ft/kT^(1/3)
-
-    if Xm is None:
-        Xm = _Xm(GR, H, W)
 
     rm = (Xm**2 + Y**2) ** 0.5 / 1000
     r = (X**2 + Y**2) ** 0.5 / 1000
@@ -183,25 +150,18 @@ def _tau(GR, H, W, Xm=None):
     return tau
 
 
-def _D(GR, H, W, tau=None, Xm=None):
+def _D(X, Y, tau, Xm):
     """
-    overpressure duration of positive phase in milliseconds
+    scaled overpressure duration of positive phase in milliseconds
+    (this is determined to be scaled after a careful reading of the context)
 
-    GR: ground range in feet
-    H: burst height in feet
-    W: yield in kiloton
+    X: scaled ground range, ft/kT^(1/3)
+    Y: scaled brust height, ft/kT^(1/3)
 
-    tau: optional, supplied to skip a call to _tau
+    tau: scaled time of arrival, ms/kT^(1/3)
+    Xm: scaled ground range of Mach Stem formation, in ft/kT^(1/3)
+
     """
-
-    m = W ** (1 / 3)
-    X = GR / m  # ft/kT^(1/3)
-    Y = H / m  # ft/kT^(1/3)
-
-    if tau is None:
-        if Xm is None:
-            Xm = _Xm(GR, H, W)
-        tau = _tau(GR, H, W, Xm)
 
     s2 = (
         1
@@ -213,9 +173,6 @@ def _D(GR, H, W, tau=None, Xm=None):
         / (0.441 + (X / 100) ** 10)
     )
 
-    """ a very careful reading of the work suggest that the duration time must
-    also scale with yield, but the original formulation does not change. We fix
-    it by multiplying m onto D."""
     D = (
         (1640700 + 24629 * tau + 416.15 * tau**2)
         / (10880 + 619.76 * tau + tau**2)
@@ -229,14 +186,14 @@ def _D(GR, H, W, tau=None, Xm=None):
             )
             * s2
         )
-    ) * m  # duration of positive phase in milliseconds,
+    )
 
     return D
 
 
-def _D_u(GR, H, W, D=None, Xm=None, DeltaP_s=None, tau=None):
+def _D_u(x, y, D, Xm, DeltaP_s, tau):
     """
-    positive phase duration for dynamic pressure in milliseconds,
+    scaled positive phase duration for dynamic pressure in milliseconds,
     duration of outward blast wind
 
     The below use the more complex form seen in Eqn.63). However, it is realized
@@ -245,40 +202,21 @@ def _D_u(GR, H, W, D=None, Xm=None, DeltaP_s=None, tau=None):
 
     Therefore, we transition to a simpler fit in free air, Eqn.51)
 
-    GR: ground range, feet
-    H: height of burst, feet
-    W: yield, kiloton
+    x: scaled ground range of burst, in kft/kT^(1/3)
+    y: scaled burst height, in kft/kT^(1/3)
     """
-
-    m = W ** (1 / 3)
-    x = GR / m / 1000  # kft/kT^(1/3)
-    y = H / m / 1000
-
-    if Xm is None:
-        Xm = _Xm(GR, H, W)
-
-    if tau is None:
-        tau = _tau(GR, H, W, Xm)
-
     if x * 1000 < Xm:  # this is fitted to DeltaP_s so should work by first principle
-        if DeltaP_s is None:
-            _pi = _DeltaP_s(GR, H, W) / 1000  # in ksi
-        else:
-            _pi = DeltaP_s / 1000
-
+        _pi = DeltaP_s / 1000
         """ see equation 52) """
 
-        D_u_pos = m * (
+        D_u_pos = (
             317 / (1 + 85 * _pi + 7500 * _pi**2)
             + 6110 * _pi / (1 + 420 * _pi**2)
             + 2113 * _pi / (1 + 11 * _pi)
-        )  # this correctly scales with yield.
+        )
         return D_u_pos
 
     else:  # in surface-burst
-        if D is None:
-            D = _D(GR, H, W, tau, Xm)
-
         C = (
             89.6 * y**5.2 / (1 + 20.5 * y**5.4)
             + 4.51 / (1 + 130.7 * y**8.6)
@@ -288,7 +226,7 @@ def _D_u(GR, H, W, D=None, Xm=None, DeltaP_s=None, tau=None):
         return C * D
 
 
-def _DeltaP(GR, H, W, t, integrate=True, DeltaP_s=None):
+def _DeltaP(X, Y, sigma, DeltaP_s, Xm, tau, integrate=True):
     """
     Overpressure over time in psi.
     Optionally, integrates it from arrival time to specified time.
@@ -319,13 +257,8 @@ def _DeltaP(GR, H, W, t, integrate=True, DeltaP_s=None):
     Eqn. 63 and its integral
 
     """
-    m = W ** (1 / 3)
-    X = GR / m  # ft/kT^(1/3)
-    Y = H / m  # ft/kT^(1/3)
 
-    z = H / GR
-
-    Xm = _Xm(GR, H, W)  # onset of Mach reflection locus, scaled, in ft per kT**(1/3)
+    z = Y / X
 
     Xe = (
         3.039 * Y / (1 + 0.0067 * Y)
@@ -362,9 +295,7 @@ def _DeltaP(GR, H, W, t, integrate=True, DeltaP_s=None):
 
     r = (X**2 + Y**2) ** 0.5 / 1000
 
-    tau = _tau(GR, H, W, Xm)
-
-    sd = _D(GR, H, W, tau, Xm) / m  # scaled time of arrival
+    sd = _D(X, Y, tau, Xm)
 
     s = (
         1
@@ -472,10 +403,6 @@ def _DeltaP(GR, H, W, t, integrate=True, DeltaP_s=None):
         else:
             return b
 
-    if DeltaP_s is None:
-        DeltaP_s = _DeltaP_s(GR, H, W)
-
-    sigma = t / m  # sigma is the scaled time in ms/kT^(1/3)
     start = tau
     end = tau + sd
 
@@ -499,13 +426,13 @@ def _DeltaP(GR, H, W, t, integrate=True, DeltaP_s=None):
         """
         return (
             DeltaP_s * atSigma(sigma),
-            DeltaP_s * intg(atSigma, tau, sigma)[0] * m,
+            DeltaP_s * intg(atSigma, tau, sigma)[0],
         )
     else:
         return DeltaP_s * atSigma(sigma)
 
 
-def _Q(GR, H, W, t, integrate=True, DeltaP_s=None):
+def _Q(X, Y, sigma, DeltaP_s, Xm, tau, integrate=True):
     """
     Overpressure or dynamic pressure horizontal component over time in psi.
     Optionally, integrates it from arrival time to specified time.
@@ -533,7 +460,7 @@ def _Q(GR, H, W, t, integrate=True, DeltaP_s=None):
         GR: ground range in feet
         H: burst height in feet
         W: yield in kiloton
-        t: time or times in milliseconds.
+        t: scaled time in ms/kT^(1/3)
 
         integrate: boolean value, controls whether an integration is done over time
         from the time of arrival to the supplied time.
@@ -545,12 +472,8 @@ def _Q(GR, H, W, t, integrate=True, DeltaP_s=None):
             dynm.press.hz.component in psi, dynm.press.hz.component impulse in psi-ms
 
     """
-    m = W ** (1 / 3)
-    X = GR / m  # ft/kT^(1/3)
-    Y = H / m  # ft/kT^(1/3)
-    z = H / GR
 
-    Xm = _Xm(GR, H, W)  # onset of Mach reflection locus, scaled, in ft per kT**(1/3)
+    z = Y / X
 
     Xe = (
         3.039 * Y / (1 + 0.0067 * Y)
@@ -570,12 +493,7 @@ def _Q(GR, H, W, t, integrate=True, DeltaP_s=None):
 
     r = (X**2 + Y**2) ** 0.5 / 1000
 
-    tau = _tau(GR, H, W, Xm)
-
-    if DeltaP_s is None:
-        DeltaP_s = _DeltaP_s(GR, H, W)
-
-    sD_u = _D_u(GR, H, W, None, Xm, DeltaP_s, tau) / m  # scaled time
+    sD_u = _D_u(X / 1000, Y / 1000, _D(X, Y, tau, Xm), Xm, DeltaP_s, tau)
 
     s = (
         1
@@ -653,7 +571,7 @@ def _Q(GR, H, W, t, integrate=True, DeltaP_s=None):
 
     """ time independent scaling factors for Q calculation"""
 
-    y = H / m / 1000
+    y = Y / 1000
     a1 = 2 - 2 / (1 + 3817 * y**9)  # a in the original
     b1 = 2 + 1.011 / (1 + 33660 * y**15)  # b in the original
 
@@ -704,20 +622,19 @@ def _Q(GR, H, W, t, integrate=True, DeltaP_s=None):
                 * (X / (1.3 * Xm)) ** b1
             )
 
-    sigma = t / m  # sigma is the scaled time in ms/kT^(1/3)
     start = tau
     end = tau + sD_u
 
     if start - sigma > 1e-9:
         raise ValueError(
-            "blast wave hasn't arrived at the specified time ( {} ms < {} ms )".format(
-                t, start * m
+            "blast wave hasn't arrived at the specified time ( {} ms/kT^(1/3) < {} ms/kT^(1/3) )".format(
+                t, start
             )
         )
     if sigma - end > 1e-9:
         raise ValueError(
-            "positive phase for dynamic pressure is over ( {} ms > {} ms )".format(
-                t, end * m
+            "positive phase for dynamic pressure is over ( {} ms/kT^(1/3) > {} ms/kT^(1/3) )".format(
+                t, end
             )
         )
 
@@ -725,7 +642,7 @@ def _Q(GR, H, W, t, integrate=True, DeltaP_s=None):
         """the integral intg(atSigma, tau, sigma)[0]
         is the scaled dynamic hz. impulse, psi-ms/kT^(1/3)
         """
-        return atSigma(sigma), intg(atSigma, tau, sigma)[0] * m
+        return atSigma(sigma), intg(atSigma, tau, sigma)[0]
     else:
         return atSigma(sigma)
 
@@ -734,7 +651,6 @@ def _Q_1(x, y, xq):
     """
     helper function for _Q_s
     """
-
     r = (x**2 + y**2) ** 0.5
     M = xq / x
 
@@ -748,19 +664,13 @@ def _Q_1(x, y, xq):
     return A * r**D / (1 + B * r**E) + C / r**F
 
 
-def _Q_s(GR, H, W):
+def _Q_s(x, y, r):
     """
     Peak (horizontal) dynamic pressure in psi
 
-    GR: ground range, feet
-    H: burst height, feet
-    W: yield, kiloton
+    x: scaled ground range in kft/kT^(1/3)
+    y: scaled ground range in kft/kT^(1/3)
     """
-    m = W ** (1 / 3)
-    x = GR / 1000 / m  # scaled ground range in kft/kt^1/3
-    y = H / 1000 / m  # scaled ground range in kft/kft^1/3
-
-    r = (x**2 + y**2) ** 0.5
 
     xq = (
         63.5 * y**7.26 / (1 + 67.11 * y**4.746) + 0.6953 * y**0.808
@@ -786,21 +696,16 @@ def _Q_s(GR, H, W):
         )
 
 
-def _I_u_pos(GR, H, W, DeltaP_s=None):
+def _sI_u_pos(x, y):
     """
-    simple fit for integral of dynamic pressure, psi-ms, with time over the
-    positive (outward flow) phase. This is only valid in the Mach reflection
-    region but is computationally simpler than integration routine above.
+    simple fit for scaled integral of dynamic pressure, psi-ms/kT^(1/3), with
+    time over the positive (outward flow) phase. This is only valid in the
+    Mach reflection region but is computationally simpler than integration
+    routine above.
 
-    GR: ground range, ft
-    H: height of burst, ft
-    W: yield, kiloton
-
+    x: scaled ground range in kft/kT^(1/3)
+    y: scaled burst height in kft/kT^(1/3)
     """
-    m = W ** (1 / 3)
-    x = GR / 1000 / m
-    y = H / 1000 / m
-
     psi = y + 0.09
 
     E = 183 * (y**2 + 0.00182) / (y**2 + 0.00222)
@@ -808,37 +713,29 @@ def _I_u_pos(GR, H, W, DeltaP_s=None):
     G = 2.3 + 29 * y / (1 + 1760 * y**5) + 25 * y**4 / (1 + 3.76 * y**6)
 
     if x > 170 * psi / (1 + 337 * psi**0.25) + 0.914 * psi**2.5:  # x> Xi
-        return (E * x / (F + x**3.61) + G / (1 + 0.22 * x**2)) * m
+        return E * x / (F + x**3.61) + G / (1 + 0.22 * x**2)
     else:
         return None  # we were unable to source a good enough estimation for this
 
 
-def _I_p_pos(GR, H, W, DeltaP_s=None, Xm=None):
+def _sI_p_pos(X, Y, DeltaP_s, Xm):
     """
-    positive phase impulse in psi-ms, using a simple fit against overpressure peak
-    this should work for airburst as well as free-air.
+    scaled positive phase impulse in psi-ms per cube root kiloton, using a simple
+    fit against overpressure peak this should work for airburst as well as free-air.
 
-    GR: ground range, feet
-    H: height of burst, feet
-    W: yield, kiloton
+    X: scaled ground range in ft/kT^(1/3)
+    Y: scaled ground range in ft/kT^(1/3)
+
+    DeltaP_s: peak dynamic pressure in psi
+    Xm: scaled range onset of mach stem in ft/kT^(1/3)
 
         "This form is good to better than 10 percent for 2 < DeltaP_s < 100,000 psi"
 
     """
-    m = W ** (1 / 3)
-    X = GR / m  # ft/kT^(1/3)
-    Y = H / m  # ft/kT^(1/3)
-
-    if DeltaP_s is None:
-        DeltaP_s = _DeltaP_s(GR, H, W)
-
-    if Xm is None:
-        Xm = _Xm(GR, H, W)
-
     if X <= Xm:  # airburst
-        return 145 * DeltaP_s**0.5 / (1 + 0.00385 * DeltaP_s**0.5) * m
+        return 145 * DeltaP_s**0.5 / (1 + 0.00385 * DeltaP_s**0.5)
     else:  # surface burst
-        return 183 * DeltaP_s**0.5 / (1 + 0.00385 * DeltaP_s**0.5) * m
+        return 183 * DeltaP_s**0.5 / (1 + 0.00385 * DeltaP_s**0.5)
 
 
 def airburst(GR_m, H_m, W, t=None, prettyPrint=True):
@@ -881,35 +778,43 @@ def airburst(GR_m, H_m, W, t=None, prettyPrint=True):
     GR = max(_uc_m2ft(GR_m), 1e-9 * m)  # clamp the value to > 0.001 meter
     H = max(_uc_m2ft(H_m), 1e-9 * m)  # clamp the value to > 0.001 meter
 
-    Xm = _Xm(GR, H, W)
-    tau = _tau(GR, H, W, Xm)
+    X = GR / m
+    Y = H / m
 
-    DeltaP_s = _DeltaP_s(GR, H, W)
-    Q_s = _Q_s(GR, H, W)
+    Xm = _Xm(X, Y)
+    tau = _tau(X, Y, Xm)
 
-    D = _D(GR, H, W, tau, Xm)
-    D_u = _D_u(GR, H, W, D, Xm, DeltaP_s, tau)
+    x = X / 1000
+    y = Y / 1000
+
+    r = (x**2 + y**2) ** 0.5
+    DeltaP_s = _DeltaP_s(x, y)
+    Q_s = _Q_s(x, y, r)
+
+    D = _D(X, Y, tau, Xm)
+    D_u = _D_u(x, y, D, Xm, DeltaP_s, tau)
 
     XM = _uc_ft2m(Xm * m)
     TAAIR = tau * m / 1000  # ms to s
 
-    DPP = D / 1000  # ms to s
-    DPQ = D_u / 1000  # ms to s
+    DPP = D * m / 1000
+    DPQ = D_u * m / 1000
 
-    p, I_p_pos = _DeltaP(GR, H, W, (tau * m + D), True, DeltaP_s)
-    q, I_u_pos = _Q(GR, H, W, (tau * m + D_u), True, DeltaP_s)
+    p, sI_p_pos = _DeltaP(X, Y, (tau + D), DeltaP_s, Xm, tau, True)
+    q, sI_u_pos = _Q(X, Y, (tau + D_u), DeltaP_s, Xm, tau, True)
 
-    I_p_est = _I_p_pos(GR, H, W, DeltaP_s, Xm)
-    I_u_est = _I_u_pos(GR, H, W, DeltaP_s)
+    sI_p_est = _sI_p_pos(X, Y, DeltaP_s, Xm)
+    sI_u_est = _sI_u_pos(x, y)
 
-    IPEST = _uc_psi2pa(I_p_est / 1000)
-    if I_u_est is not None:
-        IQEST = _uc_psi2pa(I_u_est / 1000)
+    IPEST = _uc_psi2pa(sI_p_est * m / 1000)
+
+    if sI_u_est is not None:
+        IQEST = _uc_psi2pa(sI_u_est * m / 1000)
     else:
         IQEST = None
 
-    IPTOTAL = _uc_psi2pa(I_p_pos / 1000)
-    IQTOTAL = _uc_psi2pa(I_u_pos / 1000)
+    IPTOTAL = _uc_psi2pa(sI_p_pos * m / 1000)
+    IQTOTAL = _uc_psi2pa(sI_u_pos * m / 1000)
 
     PAAIR = _uc_psi2pa(DeltaP_s)
     QAAIR = _uc_psi2pa(Q_s)
@@ -918,15 +823,17 @@ def airburst(GR_m, H_m, W, t=None, prettyPrint=True):
         PPART, IPPART, QPART, IQPART = None, None, None, None
     else:
         try:
-            pt, ipt = _DeltaP(GR, H, W, tau * m + t * 1000, integrate=True)
+            pt, sipt = _DeltaP(
+                X, Y, tau + t * 1000 / m, DeltaP_s, Xm, tau, integrate=True
+            )
             PPART = _uc_psi2pa(pt)
-            IPPART = _uc_psi2pa(ipt / 1000)
+            IPPART = _uc_psi2pa(sipt * m / 1000)
         except ValueError:
             PPART, IPPART = None, None
         try:
-            qt, iqt = _Q(GR, H, W, tau * m + t * 1000, integrate=True)
+            qt, siqt = _Q(X, Y, tau + t * 1000 / m, DeltaP_s, Xm, tau, integrate=True)
             QPART = _uc_psi2pa(qt)
-            IQPART = _uc_psi2pa(iqt / 1000)
+            IQPART = _uc_psi2pa(siqt * m / 1000)
         except ValueError:
             QPART, IQPART = None, None
 
@@ -1000,20 +907,10 @@ if __name__ == "__main__":
     from uc import _uc_m2ft, _uc_psi2pa
 
     def _airburst_to_op(gr, h, Y, t):
-        gr = max(gr, 1e-9)
-        h = max(h, 1e-9)
-        p = _uc_psi2pa(
-            _DeltaP(
-                _uc_m2ft(gr),
-                _uc_m2ft(h),
-                Y,
-                t * 1000 + _tau(_uc_m2ft(gr), _uc_m2ft(h), Y) * Y ** (1 / 3),
-                integrate=False,
-            )
-        )
-        # _, _, _, _, _, p, _, _, _, _, _, _, _, _ = airburst(gr, h, Y, t, False)
+        _, _, _, _, _, p, _, _, _, _, _, _, _, _ = airburst(gr, h, Y, t, False)
         return p
 
     runABtest(_airburst_to_op)
 
-    print(airburst(1, 1, 1))
+    print(airburst(1, 1, 1, 5e-9))
+    print(airburst(2, 2, 8, 10e-9))

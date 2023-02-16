@@ -12,7 +12,7 @@ from math import sqrt, log, log10
 from HeWu.uc import _uc_psi2pa
 
 
-Y = 1
+Y = 10
 Y3 = Y ** (1 / 3)
 xmax = 3400 * Y3
 ymax = 3400 * Y3
@@ -67,13 +67,6 @@ for gr in x:
         Q[j][i] = q / 1e6  # to MPa
 
         T[j][i] = t
-
-        """
-        if ipi < 1:
-            ipi = 1
-        if iqi < 1:
-            iqi = 1
-        """
 
         IP[j][i] = ipi
         DPP[j][i] = dpp
