@@ -25,8 +25,9 @@ def _DeltaP_s(x, y):
     """
     Peak overpressure in psi
 
-    x: scaled ground range, kft/kT^(1/3)
-    y: scaled burst height, kft/kT^(1/3)
+    input:
+        x: scaled ground range, kft/kT^(1/3)
+        y: scaled burst height, kft/kT^(1/3)
     """
 
     z = y / x  # in lower case, however is unitless
@@ -74,43 +75,6 @@ def _DeltaP_s(x, y):
     return DeltaP_s
 
 
-def _u(r):
-    """
-    r: scaled range in kilofeet per cube-root kiloton
-
-    """
-
-    return (
-        (0.543 - 21.8 * r + 386 * r**2 + 2383 * r**3)
-        * r**8
-        / (
-            2.99e-14
-            - 1.91e-10 * r**2
-            + 1.032e-6 * r**4
-            - 4.43e-6 * r**6
-            + (1.028 + 2.087 * r + 2.69 * r**2) * r**8
-        )
-    )
-
-
-def _w(r):
-    """
-    r: scaled range in kilofeet per cube-root kiloton
-
-    """
-    return (
-        (1.086 - 34.605 * r + 486.3 * r**2 + 2383 * r**3)
-        * r**8
-        / (
-            3.0137e-13
-            - 1.2128e-9 * r**2
-            + 4.128e-6 * r**4
-            - 1.116e-5 * r**6
-            + (1.632 + 2.629 * r + 2.69 * r**2) * r**8
-        )
-    )
-
-
 def _Xm(X, Y):
     """
     scaled range at which Mach reflection begins for a given burst height,
@@ -123,9 +87,9 @@ def _Xm(X, Y):
     _______________/---------------------|----
     reg.ref.region | mach reflection region
                    Xm
-
-    X: scaled ground range in ft/kT^(1/3)
-    Y: scaled ground range in ft/kT^(1/3)
+    inputs:
+        X: scaled ground range in ft/kT^(1/3)
+        Y: scaled ground range in ft/kT^(1/3)
     """
 
     Xm = 170 * Y / (1 + 60 * Y**0.25) + 2.89 * (Y / 100) ** 2.5
@@ -135,10 +99,45 @@ def _Xm(X, Y):
 def _tau(X, Y, Xm):
     """
     scaled time of arrival for GR and H, in ms/kT^(1/3), based on Eq. (41)
-    X: scaled ground range in ft/kT^(1/3)
-    Y: scaled ground range in ft/kT^(1/3)
+
+    input:
+        X: scaled ground range in ft/kT^(1/3)
+        Y: scaled ground range in ft/kT^(1/3)
 
     """
+
+    def _u(r):
+        """
+        r: scaled range in kilofeet per cube-root kiloton
+        """
+
+        return (
+            (0.543 - 21.8 * r + 386 * r**2 + 2383 * r**3)
+            * r**8
+            / (
+                2.99e-14
+                - 1.91e-10 * r**2
+                + 1.032e-6 * r**4
+                - 4.43e-6 * r**6
+                + (1.028 + 2.087 * r + 2.69 * r**2) * r**8
+            )
+        )
+
+    def _w(r):
+        """
+        r: scaled range in kilofeet per cube-root kiloton
+        """
+        return (
+            (1.086 - 34.605 * r + 486.3 * r**2 + 2383 * r**3)
+            * r**8
+            / (
+                3.0137e-13
+                - 1.2128e-9 * r**2
+                + 4.128e-6 * r**4
+                - 1.116e-5 * r**6
+                + (1.632 + 2.629 * r + 2.69 * r**2) * r**8
+            )
+        )
 
     rm = (Xm**2 + Y**2) ** 0.5 / 1000
     r = (X**2 + Y**2) ** 0.5 / 1000
@@ -155,11 +154,11 @@ def _D(X, Y, tau, Xm):
     scaled overpressure duration of positive phase in milliseconds
     (this is determined to be scaled after a careful reading of the context)
 
-    X: scaled ground range, ft/kT^(1/3)
-    Y: scaled brust height, ft/kT^(1/3)
-
-    tau: scaled time of arrival, ms/kT^(1/3)
-    Xm: scaled ground range of Mach Stem formation, in ft/kT^(1/3)
+    input:
+        X: scaled ground range, ft/kT^(1/3)
+        Y: scaled brust height, ft/kT^(1/3)
+        tau: scaled time of arrival, ms/kT^(1/3)
+        Xm: scaled ground range of Mach Stem formation, in ft/kT^(1/3)
 
     """
 
@@ -202,8 +201,9 @@ def _D_u(x, y, D, Xm, DeltaP_s, tau):
 
     Therefore, we transition to a simpler fit in free air, Eqn.51)
 
-    x: scaled ground range of burst, in kft/kT^(1/3)
-    y: scaled burst height, in kft/kT^(1/3)
+    input:
+        x: scaled ground range of burst, in kft/kT^(1/3)
+        y: scaled burst height, in kft/kT^(1/3)
     """
     if x * 1000 < Xm:  # this is fitted to DeltaP_s so should work by first principle
         _pi = DeltaP_s / 1000
@@ -434,7 +434,7 @@ def _DeltaP(X, Y, sigma, DeltaP_s, Xm, tau, integrate=True):
 
 def _Q(X, Y, sigma, DeltaP_s, Xm, tau, integrate=True):
     """
-    Overpressure or dynamic pressure horizontal component over time in psi.
+    Overpressure or dynamic pressure **horizontal component** over time in psi.
     Optionally, integrates it from arrival time to specified time.
 
         "The peak dynamic pressure and the dynamic impulse derived from this
@@ -647,30 +647,30 @@ def _Q(X, Y, sigma, DeltaP_s, Xm, tau, integrate=True):
         return atSigma(sigma)
 
 
-def _Q_1(x, y, xq):
-    """
-    helper function for _Q_s
-    """
-    r = (x**2 + y**2) ** 0.5
-    M = xq / x
-
-    A = -236.1 + 17.72 * M**0.593 / (1 + 10.4 * M**3.124)
-    B = 12.27 - 21.69 * M**2.24 / (1 + 6.976 * M**0.484)
-    C = 20.26 + 14.7 * M**2 / (1 + 0.08747 * M**3.05)
-    D = -1.137 - 0.5606 * M**0.895 / (1 + 3.046 * M**7.48)
-    E = 1.731 + 10.84 * M**1.12 / (1 + 12.26 * M**0.0014)
-    F = 2.84 + 0.855 * M**0.9 / (1 + 1.05 * M**2.84)
-
-    return A * r**D / (1 + B * r**E) + C / r**F
-
-
 def _Q_s(x, y, r):
     """
     Peak (horizontal) dynamic pressure in psi
-
-    x: scaled ground range in kft/kT^(1/3)
-    y: scaled ground range in kft/kT^(1/3)
+    input:
+        x: scaled ground range in kft/kT^(1/3)
+        y: scaled ground range in kft/kT^(1/3)
+        r: scaled distance in kft/kT^(1/3)
     """
+
+    def _Q_1(x, y, xq):
+        """
+        helper function for _Q_s
+        """
+        r = (x**2 + y**2) ** 0.5
+        M = xq / x
+
+        A = -236.1 + 17.72 * M**0.593 / (1 + 10.4 * M**3.124)
+        B = 12.27 - 21.69 * M**2.24 / (1 + 6.976 * M**0.484)
+        C = 20.26 + 14.7 * M**2 / (1 + 0.08747 * M**3.05)
+        D = -1.137 - 0.5606 * M**0.895 / (1 + 3.046 * M**7.48)
+        E = 1.731 + 10.84 * M**1.12 / (1 + 12.26 * M**0.0014)
+        F = 2.84 + 0.855 * M**0.9 / (1 + 1.05 * M**2.84)
+
+        return A * r**D / (1 + B * r**E) + C / r**F
 
     xq = (
         63.5 * y**7.26 / (1 + 67.11 * y**4.746) + 0.6953 * y**0.808
@@ -703,8 +703,9 @@ def _sI_u_pos(x, y):
     Mach reflection region but is computationally simpler than integration
     routine above.
 
-    x: scaled ground range in kft/kT^(1/3)
-    y: scaled burst height in kft/kT^(1/3)
+    input:
+        x: scaled ground range in kft/kT^(1/3)
+        y: scaled burst height in kft/kT^(1/3)
     """
     psi = y + 0.09
 
@@ -819,19 +820,18 @@ def airburst(GR_m, H_m, W, t=None, prettyPrint=True):
     PAAIR = _uc_psi2pa(DeltaP_s)
     QAAIR = _uc_psi2pa(Q_s)
 
+    sigma = tau + t * 1000 / m
     if t is None:
         PPART, IPPART, QPART, IQPART = None, None, None, None
     else:
         try:
-            pt, sipt = _DeltaP(
-                X, Y, tau + t * 1000 / m, DeltaP_s, Xm, tau, integrate=True
-            )
+            pt, sipt = _DeltaP(X, Y, sigma, DeltaP_s, Xm, tau, integrate=True)
             PPART = _uc_psi2pa(pt)
             IPPART = _uc_psi2pa(sipt * m / 1000)
         except ValueError:
             PPART, IPPART = None, None
         try:
-            qt, siqt = _Q(X, Y, tau + t * 1000 / m, DeltaP_s, Xm, tau, integrate=True)
+            qt, siqt = _Q(X, Y, sigma, DeltaP_s, Xm, tau, integrate=True)
             QPART = _uc_psi2pa(qt)
             IQPART = _uc_psi2pa(siqt * m / 1000)
         except ValueError:
@@ -911,6 +911,3 @@ if __name__ == "__main__":
         return p
 
     runABtest(_airburst_to_op)
-
-    print(airburst(1, 1, 1, 5e-9))
-    print(airburst(2, 2, 8, 10e-9))
