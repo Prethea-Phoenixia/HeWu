@@ -12,7 +12,7 @@ from math import sqrt, log, log10
 from HeWu.uc import _uc_psi2pa
 
 
-Y = 10
+Y = 1
 Y3 = Y ** (1 / 3)
 xmax = 3400 * Y3
 ymax = 3400 * Y3
@@ -124,7 +124,9 @@ def onclick(event):
     for ax in highs:
         ax.set_xlim(0, xmax / 1e3)
         ax.set_ylim(0, ymax / 1e3)
-        ax.xaxis.set_ticks(tuple(i * imax / 1e3 for i in range(int(xmax // imax) + 1)))
+        ax.xaxis.set_ticks(
+            tuple(i * imax / 1e3 for i in range(int(xmax // imax) + 1))
+        )
         ax.grid(which="major", linestyle="-", color="#DDDDDD", linewidth=1)
 
     ax2.yaxis.tick_right()
@@ -238,7 +240,9 @@ def onclick(event):
     )
     nms, lbls = css.legend_elements()
     lbls = ("Light", "Medium", "Severe")
-    legend2 = ax4.legend(nms, lbls, title="Low Buildings", ncol=1, loc="upper right")
+    legend2 = ax4.legend(
+        nms, lbls, title="Low Buildings", ncol=1, loc="upper right"
+    )
 
     i = 0
     for h in (3025, 950, 545):
@@ -254,7 +258,9 @@ def onclick(event):
         i += 1
 
     def t(y, x):
-        t, _, _, _, _, _, _, _, _, _, _, _, _, _ = airburst(x, y, Y, None, False)
+        t, _, _, _, _, _, _, _, _, _, _, _, _, _ = airburst(
+            x, y, Y, None, False
+        )
         return t
 
     cst2 = ax2.contour(
@@ -356,7 +362,7 @@ def onclick(event):
         alpha=0.75,
         cmap=cmap,
         locator=ticker.LogLocator(),
-        levels=np.logspace(log10(ipmin), log10(ipmax), 11),
+        levels=np.logspace(max(log10(ipmin), -2), log10(ipmax), 11),
         # levels=np.linspace(ipmin, ipmax, 10),
     )
 
@@ -370,7 +376,9 @@ def onclick(event):
         bbox_to_anchor=(-1.25 * top / 10, 0, top / 10, top),
         bbox_transform=ax3.transData,
     )
-    cbar3 = fig.colorbar(csd3, cax=axins3, format="%.2f", label="Impulse (kPa-s)")
+    cbar3 = fig.colorbar(
+        csd3, cax=axins3, format="%.2f", label="Impulse (kPa-s)"
+    )
 
     csd6 = ax6.contourf(
         x,
@@ -379,7 +387,7 @@ def onclick(event):
         alpha=0.75,
         cmap=cmap,
         locator=ticker.LogLocator(),
-        levels=np.logspace(log10(ipmin), log10(ipmax), 11),
+        levels=np.logspace(max(log10(ipmin), -2), log10(ipmax), 11),
     )
 
     _, top = ax6.get_ylim()
@@ -393,7 +401,9 @@ def onclick(event):
         bbox_transform=ax6.transData,
     )
 
-    cbar6 = fig.colorbar(csd6, cax=axins6, format="%.2f", label="Impulse (kPa-s)")
+    cbar6 = fig.colorbar(
+        csd6, cax=axins6, format="%.2f", label="Impulse (kPa-s)"
+    )
 
     axins2.yaxis.set_ticks_position("left")
     axins2.yaxis.set_label_position("left")

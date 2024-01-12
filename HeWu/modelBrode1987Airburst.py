@@ -40,8 +40,16 @@ def _DeltaP_s(x, y):
         + 0.6692 / (1 + 4164 * z**8)
     )
 
-    c = 4.153 - 1.149 * z**18 / (1 + 1.641 * z**18) - 1.1 / (1 + 2.771 * z**2.5)
-    d = -4.166 + 25.76 * z**1.75 / (1 + 1.382 * z**18) + 8.257 * z / (1 + 3.219 * z)
+    c = (
+        4.153
+        - 1.149 * z**18 / (1 + 1.641 * z**18)
+        - 1.1 / (1 + 2.771 * z**2.5)
+    )
+    d = (
+        -4.166
+        + 25.76 * z**1.75 / (1 + 1.382 * z**18)
+        + 8.257 * z / (1 + 3.219 * z)
+    )
     e = 1 - 0.004642 * z**18 / (1 + 0.003886 * z**18)
     f = (
         0.6096
@@ -65,7 +73,9 @@ def _DeltaP_s(x, y):
         / ((781.2 - 123.4 * r + 37.98 * r**1.5 + r**2) * (1 + 2 * y))
     )
 
-    j = 0.000629 * y**4 / (3.493e-9 + y**4) - 2.67 * y**2 / (1 + 1e7 * y**4.3)
+    j = 0.000629 * y**4 / (3.493e-9 + y**4) - 2.67 * y**2 / (
+        1 + 1e7 * y**4.3
+    )
     k = 5.18 + 0.2803 * y**3.5 / (3.788e-6 + y * 4)
 
     DeltaP_s = (
@@ -205,7 +215,9 @@ def _D_u(x, y, D, Xm, DeltaP_s, tau):
         x: scaled ground range of burst, in kft/kT^(1/3)
         y: scaled burst height, in kft/kT^(1/3)
     """
-    if x * 1000 < Xm:  # this is fitted to DeltaP_s so should work by first principle
+    if (
+        x * 1000 < Xm
+    ):  # this is fitted to DeltaP_s so should work by first principle
         _pi = DeltaP_s / 1000
         """ see equation 52) """
 
@@ -221,7 +233,9 @@ def _D_u(x, y, D, Xm, DeltaP_s, tau):
             89.6 * y**5.2 / (1 + 20.5 * y**5.4)
             + 4.51 / (1 + 130.7 * y**8.6)
             + 2.466 * y**0.5 / (1 + 99 * y**2.5)
-            - 12.8 * (x**2 + y**2) ** 1.25 / (1 + 3.63 * (x**2 + y**2) ** 1.25)
+            - 12.8
+            * (x**2 + y**2) ** 1.25
+            / (1 + 3.63 * (x**2 + y**2) ** 1.25)
         )
         return C * D
 
@@ -243,7 +257,7 @@ def _DeltaP(X, Y, sigma, DeltaP_s, Xm, tau, integrate=True):
         GR: ground range in feet
         H: burst height in feet
         W: yield in kiloton
-        t: time after detonation in milliseconds.
+        tau: scaled time after detonation in ms/kT^(1/3)
 
         integrate: boolean value, controls whether an integration is done over time
         from the time of arrival to the supplied time.
@@ -390,11 +404,19 @@ def _DeltaP(X, Y, sigma, DeltaP_s, Xm, tau, integrate=True):
 
             c = (
                 (
-                    (1.04 - 0.02409 * (X / 100) ** 4 / (1 + 0.02317 * (X / 100) ** 4))
+                    (
+                        1.04
+                        - 0.02409
+                        * (X / 100) ** 4
+                        / (1 + 0.02317 * (X / 100) ** 4)
+                    )
                     * j**7
                     / ((1 + a) * (1 + 0.923 * j**8.5))
                 )
-                * (c2 + (1 - c2) * (1 - 0.09 * K**2.5 / (1 + 0.09 * K**2.5)))
+                * (
+                    c2
+                    + (1 - c2) * (1 - 0.09 * K**2.5 / (1 + 0.09 * K**2.5))
+                )
                 * c3
                 * (1 - ((sigma - tau) / sd) ** 8)
             )  # this is harder to split into time and non-time dependent part and left as is
@@ -413,7 +435,6 @@ def _DeltaP(X, Y, sigma, DeltaP_s, Xm, tau, integrate=True):
             )
         )
     if sigma - end > 1e-9:
-
         raise ValueError(
             "positive phase for over pressure is over ( {} ms > {} ms )".format(
                 t, end * m
@@ -460,7 +481,7 @@ def _Q(X, Y, sigma, DeltaP_s, Xm, tau, integrate=True):
         GR: ground range in feet
         H: burst height in feet
         W: yield in kiloton
-        t: scaled time in ms/kT^(1/3)
+        tau: scaled time in ms/kT^(1/3)
 
         integrate: boolean value, controls whether an integration is done over time
         from the time of arrival to the supplied time.
@@ -595,11 +616,19 @@ def _Q(X, Y, sigma, DeltaP_s, Xm, tau, integrate=True):
 
             c = (
                 (
-                    (1.04 - 0.02409 * (X / 100) ** 4 / (1 + 0.02317 * (X / 100) ** 4))
+                    (
+                        1.04
+                        - 0.02409
+                        * (X / 100) ** 4
+                        / (1 + 0.02317 * (X / 100) ** 4)
+                    )
                     * j**7
                     / ((1 + a) * (1 + 0.923 * j**8.5))
                 )
-                * (c2 + (1 - c2) * (1 - 0.09 * K**2.5 / (1 + 0.09 * K**2.5)))
+                * (
+                    c2
+                    + (1 - c2) * (1 - 0.09 * K**2.5 / (1 + 0.09 * K**2.5))
+                )
                 * c3
                 * (1 - ((sigma - tau) / sD_u) ** 8)
             )  # this is harder to split into time and non-time dependent part and left as is
@@ -628,13 +657,13 @@ def _Q(X, Y, sigma, DeltaP_s, Xm, tau, integrate=True):
     if start - sigma > 1e-9:
         raise ValueError(
             "blast wave hasn't arrived at the specified time ( {} ms/kT^(1/3) < {} ms/kT^(1/3) )".format(
-                t, start
+                tau, start
             )
         )
     if sigma - end > 1e-9:
         raise ValueError(
             "positive phase for dynamic pressure is over ( {} ms/kT^(1/3) > {} ms/kT^(1/3) )".format(
-                t, end
+                tau, end
             )
         )
 
@@ -716,7 +745,9 @@ def _sI_u_pos(x, y):
     if x > 170 * psi / (1 + 337 * psi**0.25) + 0.914 * psi**2.5:  # x> Xi
         return E * x / (F + x**3.61) + G / (1 + 0.22 * x**2)
     else:
-        return None  # we were unable to source a good enough estimation for this
+        return (
+            None  # we were unable to source a good enough estimation for this
+        )
 
 
 def _sI_p_pos(X, Y, DeltaP_s, Xm):
@@ -820,10 +851,10 @@ def airburst(GR_m, H_m, W, t=None, prettyPrint=True):
     PAAIR = _uc_psi2pa(DeltaP_s)
     QAAIR = _uc_psi2pa(Q_s)
 
-    sigma = tau + t * 1000 / m
     if t is None:
         PPART, IPPART, QPART, IQPART = None, None, None, None
     else:
+        sigma = tau + t * 1000 / m
         try:
             pt, sipt = _DeltaP(X, Y, sigma, DeltaP_s, Xm, tau, integrate=True)
             PPART = _uc_psi2pa(pt)
@@ -839,7 +870,11 @@ def airburst(GR_m, H_m, W, t=None, prettyPrint=True):
 
     if prettyPrint:
         print("{:^49}".format("INPUT"))
-        print("Ground Range:{:.>9,.6g} m Burst Height:{:.>8,.6g} m".format(GR_m, H_m))
+        print(
+            "Ground Range:{:.>9,.6g} m Burst Height:{:.>8,.6g} m".format(
+                GR_m, H_m
+            )
+        )
         print(
             "Yield:{:.>15,.6g} kT Time To:{:.>13} s".format(
                 W, "######" if t is None else "{:,.6g}".format(t + TAAIR)
@@ -904,7 +939,6 @@ if __name__ == "__main__":
     by default, runs a test
     """
     from HeWu.test import runABtest
-    from uc import _uc_m2ft, _uc_psi2pa
 
     def _airburst_to_op(gr, h, Y, t):
         _, _, _, _, _, p, _, _, _, _, _, _, _, _ = airburst(gr, h, Y, t, False)
